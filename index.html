@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>우리 반 게시판</title>
+<style>
+  :root{
+    --ink:#1f2a44;          /* 잉크 네이비 */
+    --ink-soft:#46506b;
+    --paper:#f7f4ec;        /* 따뜻한 종이 */
+    --paper-card:#fffdf8;
+    --line:#e4ddcd;
+    --muted:#8a8472;
+    /* 탭별 기능 색 (기능 구분 = 정보) */
+    --c-suggest:#3b6ea5;    /* 건의 파랑 */
+    --c-roles:#3f8a5b;      /* 당번 초록 */
+    --c-praise:#d98a3d;     /* 칭찬 호박 */
+    --c-poll:#7a5bb5;       /* 투표 보라 */
+    --c-board:#2f8a86;      /* 알림판 청록 */
+    --danger:#c0533f;
+    --accent:var(--c-suggest);
+    --radius:14px;
+    --shadow:0 2px 0 rgba(31,42,68,.04), 0 8px 24px rgba(31,42,68,.07);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+    line-height:1.5;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:0 16px 96px}
+
+  /* ===== 헤더 ===== */
+  header.app{
+    position:sticky;top:0;z-index:20;
+    background:var(--ink);
+    color:#fff;
+    border-bottom:3px solid rgba(255,255,255,.08);
+  }
+  .head-inner{max-width:860px;margin:0 auto;padding:14px 16px;display:flex;align-items:center;gap:12px}
+  .brand{display:flex;flex-direction:column;gap:1px;min-width:0}
+  .brand b{font-size:17px;font-weight:800;letter-spacing:-.3px}
+  .brand small{font-size:12px;color:rgba(255,255,255,.55)}
+  .head-spacer{flex:1}
+  .classpill{
+    font-size:12.5px;background:rgba(255,255,255,.12);color:#fff;
+    padding:5px 11px;border-radius:999px;cursor:pointer;border:1px solid rgba(255,255,255,.14);
+    white-space:nowrap;
+  }
+  .mode-btn{
+    font-size:12.5px;font-weight:700;border:none;cursor:pointer;
+    padding:7px 13px;border-radius:999px;background:#fff;color:var(--ink);
+  }
+  .mode-btn.teacher{background:#ffe9a8;color:#5b4a18}
+
+  /* ===== 탭 ===== */
+  nav.tabs{display:flex;gap:6px;overflow-x:auto;padding:12px 4px 4px;scrollbar-width:none}
+  nav.tabs::-webkit-scrollbar{display:none}
+  .tab{
+    flex:0 0 auto;border:1.5px solid var(--line);background:var(--paper-card);
+    color:var(--ink-soft);font-weight:700;font-size:14px;
+    padding:9px 15px;border-radius:999px;cursor:pointer;display:flex;align-items:center;gap:7px;
+    transition:transform .08s ease;
+  }
+  .tab:active{transform:scale(.97)}
+  .tab .dot{width:9px;height:9px;border-radius:50%}
+  .tab[data-k="board"]   .dot{background:var(--c-board)}
+  .tab[data-k="suggest"] .dot{background:var(--c-suggest)}
+  .tab[data-k="roles"]   .dot{background:var(--c-roles)}
+  .tab[data-k="praise"]  .dot{background:var(--c-praise)}
+  .tab[data-k="poll"]    .dot{background:var(--c-poll)}
+  .tab.active{color:#fff;border-color:transparent}
+  .tab.active[data-k="board"]{background:var(--c-board)}
+  .tab.active[data-k="suggest"]{background:var(--c-suggest)}
+  .tab.active[data-k="roles"]{background:var(--c-roles)}
+  .tab.active[data-k="praise"]{background:var(--c-praise)}
+  .tab.active[data-k="poll"]{background:var(--c-poll)}
+  .tab.active .dot{background:#fff}
+
+  /* ===== 카드/공통 ===== */
+  .panel{display:none;animation:fade .25s ease}
+  .panel.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  .card{
+    background:var(--paper-card);border:1.5px solid var(--line);
+    border-radius:var(--radius);padding:18px;margin:14px 0;box-shadow:var(--shadow);
+  }
+  .card h2{margin:0 0 4px;font-size:16px;font-weight:800;display:flex;align-items:center;gap:8px}
+  .card .sub{font-size:13px;color:var(--muted);margin:0 0 14px}
+  label.fld{display:block;font-size:13px;font-weight:700;color:var(--ink-soft);margin:12px 0 5px}
+  input[type=text],input[type=password],textarea,select{
+    width:100%;font:inherit;font-size:15px;color:var(--ink);
+    background:#fff;border:1.5px solid var(--line);border-radius:10px;padding:11px 12px;
+  }
+  input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent)}
+  textarea{resize:vertical;min-height:88px}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  .row>*{flex:1;min-width:0}
+  .btn{
+    font:inherit;font-weight:700;font-size:15px;border:none;cursor:pointer;
+    background:var(--accent);color:#fff;padding:12px 16px;border-radius:11px;width:100%;
+    transition:filter .1s ease;
+  }
+  .btn:hover{filter:brightness(1.05)}
+  .btn:active{filter:brightness(.95)}
+  .btn.ghost{background:transparent;color:var(--accent);border:1.5px solid currentColor}
+  .btn.small{width:auto;padding:8px 14px;font-size:13.5px}
+  .btn.danger{background:var(--danger)}
+  .chk{display:flex;align-items:center;gap:9px;font-size:14.5px;font-weight:600;color:var(--ink-soft);cursor:pointer;padding:6px 0}
+  .chk input{width:18px;height:18px;accent-color:var(--accent)}
+
+  .empty{text-align:center;color:var(--muted);font-size:14px;padding:30px 10px}
+  .empty .big{font-size:30px;display:block;margin-bottom:8px;opacity:.6}
+
+  .item{background:var(--paper-card);border:1.5px solid var(--line);border-radius:12px;padding:14px;margin:10px 0}
+  .item .meta{font-size:12px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .badge{font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px}
+  .badge.anon{background:#eef2f8;color:#4a5b73}
+  .badge.real{background:#e9f3ec;color:#2f6b46}
+  .badge.counsel{background:#fbeede;color:#9a6320}
+  .badge.done{background:#eee;color:#888}
+
+  /* 칭찬 = 포스트잇 느낌 (이 앱의 시그니처) */
+  .praise-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:6px}
+  .sticky{
+    border-radius:4px 14px 6px 12px;padding:14px 14px 16px;position:relative;
+    color:#42371d;font-size:14px;box-shadow:0 6px 14px rgba(120,90,30,.14);
+    transform:rotate(var(--r,-1.2deg));min-height:96px;display:flex;flex-direction:column;
+  }
+  .sticky:nth-child(3n){--r:1.4deg}
+  .sticky:nth-child(3n+1){--r:-1.8deg}
+  .sticky .to{font-weight:800;font-size:13px;margin-bottom:5px}
+  .sticky .body{flex:1;white-space:pre-wrap;word-break:break-word}
+  .sticky .from{font-size:11.5px;text-align:right;opacity:.7;margin-top:8px}
+
+  /* 투표 막대 */
+  .opt{margin:9px 0}
+  .opt .lbl{display:flex;justify-content:space-between;font-size:14px;font-weight:600;margin-bottom:4px}
+  .bar{height:11px;background:#ece6da;border-radius:999px;overflow:hidden}
+  .bar > i{display:block;height:100%;background:var(--c-poll);border-radius:999px;width:0;transition:width .4s ease}
+  .vote-btn{width:100%;text-align:left;background:#fff;border:1.5px solid var(--line);border-radius:11px;padding:12px 14px;margin:7px 0;font:inherit;font-size:15px;font-weight:600;cursor:pointer;color:var(--ink)}
+  .vote-btn:hover{border-color:var(--c-poll);background:#faf7ff}
+
+  /* 배너 */
+  .banner{background:#fff4d6;border:1.5px solid #f0d98a;color:#6b531a;border-radius:12px;padding:12px 14px;font-size:13.5px;margin:14px 0;line-height:1.55}
+  .banner b{color:#5b4512}
+
+  /* 모달 */
+  .modal-bg{position:fixed;inset:0;background:rgba(31,42,68,.45);display:none;align-items:center;justify-content:center;z-index:50;padding:18px}
+  .modal-bg.show{display:flex}
+  .modal{background:var(--paper-card);border-radius:16px;padding:22px;max-width:380px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+  .modal h3{margin:0 0 6px;font-size:17px}
+  .modal p{margin:0 0 14px;font-size:13.5px;color:var(--muted)}
+
+  .seg{display:flex;gap:6px;margin:6px 0 2px}
+  .seg button{flex:1;border:1.5px solid var(--line);background:#fff;border-radius:10px;padding:9px;font:inherit;font-weight:700;font-size:13.5px;color:var(--ink-soft);cursor:pointer}
+  .seg button.on{background:var(--accent);color:#fff;border-color:transparent}
+
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:12px 20px;border-radius:999px;font-size:14px;font-weight:600;opacity:0;transition:.25s;z-index:60;pointer-events:none}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .teacher-only{display:none}
+  body.is-teacher .teacher-only{display:block}
+  .hint{font-size:12px;color:var(--muted);margin-top:6px}
+  hr.soft{border:none;border-top:1px solid var(--line);margin:16px 0}
+  /* 1인1역·청소당번 표 */
+  .dtable-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table.dtable{border-collapse:collapse;width:100%;font-size:14px;min-width:max-content}
+  table.dtable th,table.dtable td{border:1px solid var(--line);padding:9px 12px;text-align:left;white-space:nowrap}
+  table.dtable th{background:var(--c-roles);color:#fff;font-weight:700;font-size:13.5px}
+  table.dtable tr:nth-child(even) td{background:#f4f8f5}
+  table.dtable td:first-child{font-weight:700;color:var(--ink-soft)}
+
+  /* 알림판: 공지 */
+  .notice{background:#fff;border:1.5px solid var(--line);border-left:4px solid var(--c-board);border-radius:10px;padding:13px 14px;margin:10px 0}
+  .notice .body{white-space:pre-wrap;word-break:break-word;font-size:15px}
+  .notice .when{font-size:12px;color:var(--muted);margin-top:7px;display:flex;align-items:center;gap:8px}
+  .notice.pin{border-left-color:var(--c-praise);background:#fffaf0}
+  .pinmark{font-size:11px;font-weight:800;color:var(--c-praise)}
+
+  /* 학급비 계좌 안내 */
+  .acct-box{background:var(--ink);color:#fff;border-radius:14px;padding:18px 20px}
+  .acct-bank{font-size:13px;color:rgba(255,255,255,.7)}
+  .acct-holder{color:rgba(255,255,255,.55)}
+  .acct-num{font-size:23px;font-weight:800;letter-spacing:.5px;margin:6px 0 14px;word-break:break-all}
+  .acct-copy{background:#fff;color:var(--ink)}
+  .acct-memo{margin-top:14px;padding-top:13px;border-top:1px solid rgba(255,255,255,.15);font-size:14px;color:#ffe9a8}
+</style>
+</head>
+<body>
+
+<header class="app">
+  <div class="head-inner">
+    <div class="brand">
+      <b>우리 반 게시판</b>
+      <small id="classLabel">학급 선택</small>
+    </div>
+    <div class="head-spacer"></div>
+    <span class="classpill" id="classPill">학급 변경</span>
+    <button class="mode-btn" id="modeBtn">교사 모드</button>
+  </div>
+  <nav class="tabs" id="tabs">
+    <button class="tab active" data-k="board"><span class="dot"></span>알림판</button>
+    <button class="tab" data-k="suggest"><span class="dot"></span>건의·상담</button>
+    <button class="tab" data-k="roles"><span class="dot"></span>1인1역·청소당번</button>
+    <button class="tab" data-k="praise"><span class="dot"></span>칭찬</button>
+    <button class="tab" data-k="poll"><span class="dot"></span>투표</button>
+  </nav>
+</header>
+
+<div class="wrap">
+
+  <div id="cfgBanner" class="banner" style="display:none">
+    <b>Firebase 설정이 필요합니다.</b> 파일 아래쪽 <code>firebaseConfig</code> 부분에 본인 프로젝트 설정을 붙여넣어야 동기화가 작동합니다.
+  </div>
+
+  <!-- ===================== 알림판 (공지 + 학급 계좌) ===================== -->
+  <section class="panel active" data-panel="board">
+
+    <!-- 계좌 안내 -->
+    <div class="card">
+      <h2>학급비 계좌 안내</h2>
+
+      <!-- 학생: 보기 + 복사 -->
+      <div id="acctView">
+        <div class="empty">아직 등록된 계좌가 없어요.</div>
+      </div>
+
+      <!-- 교사: 입력 -->
+      <div class="teacher-only" style="margin-top:14px">
+        <hr class="soft" />
+        <label class="fld">계좌 등록 / 수정</label>
+        <div class="row">
+          <input type="text" id="aBank" placeholder="은행 (예: 카카오뱅크)" style="flex:1.3" />
+          <input type="text" id="aHolder" placeholder="예금주" style="flex:1" />
+        </div>
+        <label class="fld">계좌번호</label>
+        <input type="text" id="aNumber" placeholder="3333-01-1234567" />
+        <label class="fld">안내 문구 (선택)</label>
+        <input type="text" id="aMemo" placeholder="예: 6월 학급비 15,000원 · 6/20까지" />
+        <div style="height:12px"></div>
+        <button class="btn small" id="aSave" style="background:var(--c-board)">계좌 저장</button>
+      </div>
+    </div>
+
+    <!-- 공지사항 -->
+    <div class="card">
+      <h2>공지사항</h2>
+      <p class="sub">선생님이 올린 안내를 확인하세요.</p>
+
+      <div class="teacher-only">
+        <textarea id="nText" placeholder="공지 내용을 입력하세요."></textarea>
+        <label class="chk"><input type="checkbox" id="nPin" /> 맨 위에 고정</label>
+        <div style="height:8px"></div>
+        <button class="btn small" id="nAdd" style="background:var(--c-board)">공지 올리기</button>
+        <hr class="soft" />
+      </div>
+
+      <div id="noticeList"><div class="empty"><span class="big">📢</span>아직 공지가 없어요.</div></div>
+    </div>
+
+  </section>
+
+  <!-- ===================== 건의·상담 ===================== -->
+  <section class="panel" data-panel="suggest">
+    <!-- 학생: 작성만 -->
+    <div class="card not-teacher" id="suggestWrite">
+      <h2>건의함 · 상담 신청</h2>
+      <p class="sub">선생님만 볼 수 있어요. 익명으로 남겨도 괜찮아요.</p>
+
+      <div class="seg" id="anonSeg">
+        <button class="on" data-anon="1">익명으로</button>
+        <button data-anon="0">이름 밝히기</button>
+      </div>
+      <div id="nameWrap" style="display:none">
+        <label class="fld">이름</label>
+        <input type="text" id="sName" placeholder="이름" />
+      </div>
+
+      <label class="fld">하고 싶은 말</label>
+      <textarea id="sText" placeholder="건의하고 싶은 것, 힘든 일, 하고 싶은 말을 자유롭게 적어주세요."></textarea>
+
+      <label class="chk" style="margin-top:10px">
+        <input type="checkbox" id="sCounsel" /> 선생님과 따로 상담하고 싶어요
+      </label>
+      <div id="slotWrap" style="display:none">
+        <label class="fld">언제가 편한가요?</label>
+        <select id="sSlot">
+          <option value="">희망 시간 선택</option>
+          <option>아침 조회 전</option>
+          <option>점심시간</option>
+          <option>방과 후</option>
+          <option>아무 때나 괜찮아요</option>
+        </select>
+      </div>
+
+      <div style="height:14px"></div>
+      <button class="btn" id="sSubmit">보내기</button>
+      <p class="hint">보낸 내용은 다른 친구에게 보이지 않아요.</p>
+    </div>
+
+    <!-- 교사: 열람 -->
+    <div class="teacher-only" id="suggestRead">
+      <div class="card">
+        <h2>들어온 건의 · 상담</h2>
+        <p class="sub">상담 신청 글에는 노란 배지가 붙습니다.</p>
+        <div id="suggestList"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== 1인1역 · 청소당번 ===================== -->
+  <section class="panel" data-panel="roles">
+
+    <!-- 1인1역 (고정) -->
+    <div class="card">
+      <h2>1인1역</h2>
+      <p class="sub">우리 반 1인1역 담당표예요.</p>
+      <div id="roleTableView"><div class="empty"><span class="big">🙋</span>아직 등록 전이에요.</div></div>
+      <div class="teacher-only">
+        <hr class="soft" />
+        <label class="fld">표 입력 / 수정</label>
+        <textarea id="roleInput" placeholder="역할&#9;담당&#10;칠판&#9;김민준&#10;창문/환기&#9;이서연&#10;분리수거&#9;박지후"></textarea>
+        <p class="hint">스프레드시트에서 표를 복사해 붙여넣으면 됩니다. 첫 줄은 제목 행이에요.</p>
+        <div style="height:10px"></div>
+        <button class="btn small" id="roleSave" style="background:var(--c-roles)">1인1역 저장</button>
+      </div>
+    </div>
+
+    <!-- 청소당번 -->
+    <div class="card">
+      <h2>청소당번</h2>
+      <p class="sub">청소 구역별 담당표예요.</p>
+      <div id="cleanTableView"><div class="empty"><span class="big">🧹</span>아직 등록 전이에요.</div></div>
+      <div class="teacher-only">
+        <hr class="soft" />
+        <label class="fld">표 입력 / 수정</label>
+        <textarea id="cleanInput" placeholder="구역&#9;월&#9;화&#9;수&#9;목&#9;금&#10;교실 앞&#9;김민준&#9;이서연&#9;...&#10;복도&#9;박지후&#9;..."></textarea>
+        <p class="hint">스프레드시트에서 복사해 붙여넣으세요. 첫 줄은 제목 행이에요.</p>
+        <div style="height:10px"></div>
+        <button class="btn small" id="cleanSave" style="background:var(--c-roles)">청소당번 저장</button>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ===================== 칭찬 ===================== -->
+  <section class="panel" data-panel="praise">
+    <div class="card">
+      <h2>칭찬 한마디</h2>
+      <p class="sub">친구의 고마운 점, 멋진 점을 남겨보세요.</p>
+      <div class="row">
+        <div><label class="fld">누구에게</label><input type="text" id="pTo" placeholder="칭찬할 친구 이름"/></div>
+        <div><label class="fld">누가 (선택)</label><input type="text" id="pFrom" placeholder="익명도 가능"/></div>
+      </div>
+      <label class="fld">내용</label>
+      <textarea id="pText" placeholder="예) 어제 준비물 빌려줘서 고마웠어!"></textarea>
+      <div style="height:12px"></div>
+      <button class="btn" id="pSubmit" style="background:var(--c-praise)">칭찬 붙이기</button>
+    </div>
+    <div class="card">
+      <h2>칭찬 벽</h2>
+      <div id="praiseWall"><div class="empty"><span class="big">🧡</span>첫 칭찬을 남겨보세요.</div></div>
+    </div>
+  </section>
+
+  <!-- ===================== 투표 ===================== -->
+  <section class="panel" data-panel="poll">
+    <div class="card teacher-only">
+      <h2>새 투표 만들기</h2>
+      <label class="fld">질문</label>
+      <input type="text" id="qQuestion" placeholder="예) 반티 색깔 골라요!"/>
+      <label class="fld">선택지 (한 줄에 하나)</label>
+      <textarea id="qOptions" placeholder="네이비&#10;버건디&#10;아이보리"></textarea>
+      <div style="height:12px"></div>
+      <button class="btn" id="qCreate" style="background:var(--c-poll)">투표 시작</button>
+      <p class="hint">새 투표를 만들면 이전 투표는 종료되고 결과만 남습니다.</p>
+    </div>
+    <div class="card">
+      <h2 id="pollTitle">진행 중인 투표</h2>
+      <div id="pollArea"><div class="empty"><span class="big">🗳️</span>아직 투표가 없어요.</div></div>
+    </div>
+  </section>
+
+</div>
+
+<!-- 모달: 학급 / PIN -->
+<div class="modal-bg" id="classModal">
+  <div class="modal">
+    <h3>학급 코드</h3>
+    <p>예: 2-3 (2학년 3반). 같은 코드를 쓰면 모두 같은 화면을 공유합니다.</p>
+    <input type="text" id="classInput" placeholder="2-3" />
+    <div style="height:14px"></div>
+    <button class="btn" id="classSave">이 학급으로 입장</button>
+  </div>
+</div>
+<div class="modal-bg" id="pinModal">
+  <div class="modal">
+    <h3>교사 모드</h3>
+    <p>PIN을 입력하면 건의 열람·당번 관리·투표 생성이 열립니다.</p>
+    <input type="password" id="pinInput" inputmode="numeric" placeholder="PIN" />
+    <div style="height:14px"></div>
+    <button class="btn" id="pinSave">잠금 해제</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+/* Firebase 함수들은 아래 loadFirebase()에서 동적으로 불러와 채웁니다.
+   (이렇게 하면 Firebase 로딩이 실패해도 탭·입력 등 UI는 그대로 작동합니다) */
+let initializeApp, getFirestore, collection, addDoc, onSnapshot, query, orderBy,
+    doc, setDoc, getDoc, updateDoc, serverTimestamp, deleteDoc, increment;
+
+/* ============================================================
+   ① 여기에 본인 Firebase 프로젝트 설정을 붙여넣으세요
+   (Firebase 콘솔 > 프로젝트 설정 > 내 앱 > SDK 설정 및 구성)
+   ============================================================ */
+const firebaseConfig = {
+  apiKey: "AIzaSyDEVJk1GOGjJdBfCJjuMyeXmzzKIw4wlKI",
+  authDomain: "classboard-4b9da.firebaseapp.com",
+  projectId: "classboard-4b9da",
+  storageBucket: "classboard-4b9da.firebasestorage.app",
+  messagingSenderId: "933415283397",
+  appId: "1:933415283397:web:87f93865e49a9e8d049eac"
+};
+
+/* ② 교사 모드 PIN (원하는 숫자로 바꾸세요) */
+const TEACHER_PIN = "20080437";
+/* ============================================================ */
+
+const toast = (m)=>{const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1900);};
+
+// Firebase는 loadFirebase()에서 동적으로 연결됩니다.
+let db=null;
+
+/* ---------- 학급 코드 ---------- */
+const params=new URLSearchParams(location.search);
+let classId = params.get('class') || localStorage.getItem('classId') || '';
+function refreshClassLabel(){
+  document.getElementById('classLabel').textContent = classId ? classId+'반' : '학급을 설정하세요';
+}
+function openClassModal(){
+  document.getElementById('classInput').value=classId;
+  document.getElementById('classModal').classList.add('show');
+}
+document.getElementById('classPill').onclick=openClassModal;
+document.getElementById('classSave').onclick=()=>{
+  const v=document.getElementById('classInput').value.trim();
+  if(!v){toast('학급 코드를 입력하세요');return;}
+  classId=v; localStorage.setItem('classId',v);
+  document.getElementById('classModal').classList.remove('show');
+  refreshClassLabel(); startListeners();
+  toast(v+'반 입장');
+};
+refreshClassLabel();
+if(!classId) openClassModal();
+
+/* ---------- 교사 모드 ---------- */
+let isTeacher = sessionStorage.getItem('isTeacher')==='1';
+function applyMode(){
+  document.body.classList.toggle('is-teacher',isTeacher);
+  const b=document.getElementById('modeBtn');
+  b.textContent = isTeacher ? '교사 모드 ✓' : '교사 모드';
+  b.classList.toggle('teacher',isTeacher);
+}
+document.getElementById('modeBtn').onclick=()=>{
+  if(isTeacher){ isTeacher=false; sessionStorage.removeItem('isTeacher'); applyMode(); toast('학생 화면'); }
+  else document.getElementById('pinModal').classList.add('show');
+};
+document.getElementById('pinSave').onclick=()=>{
+  if(document.getElementById('pinInput').value===TEACHER_PIN){
+    isTeacher=true; sessionStorage.setItem('isTeacher','1'); applyMode();
+    document.getElementById('pinModal').classList.remove('show');
+    document.getElementById('pinInput').value='';
+    toast('교사 모드 ✓');
+  }else toast('PIN이 달라요');
+};
+applyMode();
+
+/* ---------- 탭 ---------- */
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
+  t.classList.add('active');
+  document.querySelector(`[data-panel="${t.dataset.k}"]`).classList.add('active');
+  const colors={board:'--c-board',suggest:'--c-suggest',roles:'--c-roles',praise:'--c-praise',poll:'--c-poll'};
+  document.documentElement.style.setProperty('--accent',`var(${colors[t.dataset.k]})`);
+});
+
+/* 모달 바깥 클릭 닫기 */
+document.querySelectorAll('.modal-bg').forEach(m=>m.onclick=e=>{if(e.target===m)m.classList.remove('show')});
+
+const col=(name)=> collection(db,'classes',classId,name);
+const docRef=(name,id)=> doc(db,'classes',classId,name,id);
+const fmt=(ts)=>{ if(!ts) return ''; const d=ts.toDate?ts.toDate():new Date(ts); return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; };
+const esc=(s='')=> s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+/* =========================================================
+   알림판 — 공지사항
+   ========================================================= */
+document.getElementById('nAdd').onclick=async()=>{
+  if(!db||!classId) return toast('학급 먼저 설정하세요');
+  const text=document.getElementById('nText').value.trim();
+  if(!text) return toast('공지 내용을 입력하세요');
+  await addDoc(col('notices'),{text,pinned:document.getElementById('nPin').checked,createdAt:serverTimestamp()});
+  document.getElementById('nText').value='';
+  document.getElementById('nPin').checked=false;
+  toast('공지를 올렸어요 📢');
+};
+function renderNotices(items){
+  const box=document.getElementById('noticeList');
+  if(!items.length){box.innerHTML='<div class="empty"><span class="big">📢</span>아직 공지가 없어요.</div>';return;}
+  items.sort((a,b)=> (b.pinned?1:0)-(a.pinned?1:0));
+  box.innerHTML=items.map(it=>`
+    <div class="notice ${it.pinned?'pin':''}">
+      <div class="body">${esc(it.text)}</div>
+      <div class="when">${it.pinned?'<span class="pinmark">📌 고정</span>':''}${fmt(it.createdAt)}
+        ${isTeacher?`<button class="btn small danger" style="margin-left:auto" data-id="${it.id}">삭제</button>`:''}</div>
+    </div>`).join('');
+  if(isTeacher) box.querySelectorAll('button[data-id]').forEach(b=>b.onclick=async()=>{ if(confirm('공지를 삭제할까요?')) await deleteDoc(docRef('notices',b.dataset.id)); });
+}
+
+/* =========================================================
+   알림판 — 학급비 계좌 안내
+   ========================================================= */
+document.getElementById('aSave').onclick=async()=>{
+  if(!db||!classId) return toast('학급 먼저 설정하세요');
+  const number=document.getElementById('aNumber').value.trim();
+  if(!number) return toast('계좌번호를 입력하세요');
+  await setDoc(docRef('account','info'),{
+    bank:document.getElementById('aBank').value.trim(),
+    holder:document.getElementById('aHolder').value.trim(),
+    number,
+    memo:document.getElementById('aMemo').value.trim(),
+    updatedAt:serverTimestamp()
+  });
+  toast('계좌를 저장했어요');
+};
+function renderAccount(a){
+  const view=document.getElementById('acctView');
+  if(a){
+    document.getElementById('aBank').value=a.bank||'';
+    document.getElementById('aHolder').value=a.holder||'';
+    document.getElementById('aNumber').value=a.number||'';
+    document.getElementById('aMemo').value=a.memo||'';
+  }
+  if(a&&a.number){
+    view.innerHTML=`
+      <div class="acct-box">
+        <div class="acct-bank">${esc(a.bank||'')}${a.holder?` <span class="acct-holder">· ${esc(a.holder)}</span>`:''}</div>
+        <div class="acct-num">${esc(a.number)}</div>
+        <button class="btn small acct-copy" id="acctCopy">번호 복사</button>
+        ${a.memo?`<div class="acct-memo">${esc(a.memo)}</div>`:''}
+      </div>`;
+    document.getElementById('acctCopy').onclick=async()=>{
+      try{ await navigator.clipboard.writeText(a.number); toast('계좌번호를 복사했어요'); }
+      catch(e){ toast('복사가 안 되면 길게 눌러 선택하세요'); }
+    };
+  }else{
+    view.innerHTML='<div class="empty">아직 등록된 계좌가 없어요.</div>';
+  }
+}
+
+/* =========================================================
+   건의 · 상담
+   ========================================================= */
+// 익명/실명 토글
+document.getElementById('anonSeg').onclick=e=>{
+  const b=e.target.closest('button'); if(!b)return;
+  document.querySelectorAll('#anonSeg button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');
+  document.getElementById('nameWrap').style.display = b.dataset.anon==='0'?'block':'none';
+};
+document.getElementById('sCounsel').onchange=e=>{
+  document.getElementById('slotWrap').style.display=e.target.checked?'block':'none';
+};
+document.getElementById('sSubmit').onclick=async()=>{
+  if(!db) return toast('Firebase 설정이 필요해요');
+  if(!classId) return openClassModal();
+  const text=document.getElementById('sText').value.trim();
+  if(!text) return toast('내용을 적어주세요');
+  const anon=document.querySelector('#anonSeg button.on').dataset.anon==='1';
+  const counsel=document.getElementById('sCounsel').checked;
+  await addDoc(col('suggestions'),{
+    text, anonymous:anon,
+    name: anon?'':document.getElementById('sName').value.trim(),
+    counsel, slot: counsel?document.getElementById('sSlot').value:'',
+    resolved:false, createdAt:serverTimestamp()
+  });
+  document.getElementById('sText').value='';
+  document.getElementById('sCounsel').checked=false;
+  document.getElementById('slotWrap').style.display='none';
+  toast('보냈어요. 고마워요 🙂');
+};
+function renderSuggestions(items){
+  const box=document.getElementById('suggestList');
+  if(!items.length){box.innerHTML='<div class="empty"><span class="big">📮</span>아직 들어온 글이 없어요.</div>';return;}
+  box.innerHTML=items.map(it=>{
+    const who = it.anonymous?'<span class="badge anon">익명</span>':`<span class="badge real">${esc(it.name||'이름없음')}</span>`;
+    const c = it.counsel?`<span class="badge counsel">상담 · ${esc(it.slot||'시간미정')}</span>`:'';
+    const done = it.resolved?'<span class="badge done">확인됨</span>':'';
+    return `<div class="item">
+      <div class="meta">${who}${c}${done}<span style="margin-left:auto">${fmt(it.createdAt)}</span></div>
+      <div style="margin:8px 0;white-space:pre-wrap;word-break:break-word">${esc(it.text)}</div>
+      <div class="row">
+        <button class="btn small ghost" data-act="toggle" data-id="${it.id}">${it.resolved?'확인 취소':'확인 처리'}</button>
+        <button class="btn small danger" data-act="del" data-id="${it.id}">삭제</button>
+      </div>
+    </div>`;
+  }).join('');
+  box.querySelectorAll('button').forEach(b=>b.onclick=async()=>{
+    const id=b.dataset.id;
+    if(b.dataset.act==='del'){ if(confirm('삭제할까요?')) await deleteDoc(docRef('suggestions',id)); }
+    else{ const cur=items.find(x=>x.id===id); await updateDoc(docRef('suggestions',id),{resolved:!cur.resolved}); }
+  });
+}
+
+/* =========================================================
+   1인1역 · 청소당번 (표 붙여넣기)
+   ========================================================= */
+// 붙여넣은 텍스트(탭 또는 콤마 구분, 첫 줄=제목)를 표로 변환
+function textToTable(raw){
+  const rows=String(raw||'').replace(/\r/g,'').split('\n').filter(l=>l.trim()!=='');
+  if(!rows.length) return '';
+  const split=(l)=> l.includes('\t') ? l.split('\t') : l.split(',');
+  const head=split(rows[0]).map(c=>`<th>${esc(c.trim())}</th>`).join('');
+  const body=rows.slice(1).map(r=>'<tr>'+split(r).map(c=>`<td>${esc(c.trim())}</td>`).join('')+'</tr>').join('');
+  return `<div class="dtable-wrap"><table class="dtable"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+}
+function renderDutyTable(viewId,emptyHtml,raw){
+  document.getElementById(viewId).innerHTML = raw && raw.trim() ? textToTable(raw) : emptyHtml;
+}
+async function saveDuty(field,inputId){
+  if(!db||!classId) return toast('학급 먼저 설정하세요');
+  const text=document.getElementById(inputId).value;
+  if(!text.trim()) return toast('표 내용을 입력하세요');
+  await setDoc(docRef('duties','info'),{[field]:text},{merge:true});
+  toast('저장했어요');
+}
+document.getElementById('roleSave').onclick=()=>saveDuty('role','roleInput');
+document.getElementById('cleanSave').onclick=()=>saveDuty('clean','cleanInput');
+
+const ROLE_EMPTY='<div class="empty"><span class="big">🙋</span>아직 등록 전이에요.</div>';
+const CLEAN_EMPTY='<div class="empty"><span class="big">🧹</span>아직 등록 전이에요.</div>';
+function renderDuties(d){
+  d=d||{};
+  if(document.activeElement?.id!=='roleInput') document.getElementById('roleInput').value=d.role||'';
+  if(document.activeElement?.id!=='cleanInput') document.getElementById('cleanInput').value=d.clean||'';
+  renderDutyTable('roleTableView',ROLE_EMPTY,d.role);
+  renderDutyTable('cleanTableView',CLEAN_EMPTY,d.clean);
+}
+
+/* =========================================================
+   칭찬
+   ========================================================= */
+document.getElementById('pSubmit').onclick=async()=>{
+  if(!db||!classId) return toast('학급 먼저 설정하세요');
+  const to=document.getElementById('pTo').value.trim();
+  const text=document.getElementById('pText').value.trim();
+  if(!to||!text) return toast('받는 사람과 내용을 적어주세요');
+  await addDoc(col('praises'),{to,from:document.getElementById('pFrom').value.trim()||'익명',text,createdAt:serverTimestamp()});
+  document.getElementById('pTo').value='';document.getElementById('pFrom').value='';document.getElementById('pText').value='';
+  toast('칭찬을 붙였어요 🧡');
+};
+const stickyColors=['#fff4b8','#ffe0c2','#d8f0d0','#d6ecff','#f0dcff','#ffd9e3'];
+function renderPraise(items){
+  const wall=document.getElementById('praiseWall');
+  if(!items.length){wall.innerHTML='<div class="empty"><span class="big">🧡</span>첫 칭찬을 남겨보세요.</div>';return;}
+  wall.innerHTML='<div class="praise-grid">'+items.map((it,i)=>`
+    <div class="sticky" style="background:${stickyColors[i%stickyColors.length]}">
+      <div class="to">→ ${esc(it.to)}</div>
+      <div class="body">${esc(it.text)}</div>
+      <div class="from">— ${esc(it.from)}</div>
+      ${isTeacher?`<button class="btn small danger" style="margin-top:8px" data-id="${it.id}">삭제</button>`:''}
+    </div>`).join('')+'</div>';
+  if(isTeacher) wall.querySelectorAll('button[data-id]').forEach(b=>b.onclick=async()=>{ if(confirm('삭제할까요?')) await deleteDoc(docRef('praises',b.dataset.id)); });
+}
+
+/* =========================================================
+   투표
+   ========================================================= */
+let activePoll=null;
+document.getElementById('qCreate').onclick=async()=>{
+  if(!db||!classId) return toast('학급 먼저 설정하세요');
+  const q=document.getElementById('qQuestion').value.trim();
+  const opts=document.getElementById('qOptions').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  if(!q||opts.length<2) return toast('질문과 선택지 2개 이상');
+  await setDoc(docRef('polls','active'),{
+    question:q, options:opts.map(label=>({label,votes:0})),
+    createdAt:serverTimestamp(), id:Date.now().toString()
+  });
+  document.getElementById('qQuestion').value='';document.getElementById('qOptions').value='';
+  toast('투표 시작!');
+};
+function renderPoll(p){
+  activePoll=p;
+  const area=document.getElementById('pollArea');
+  const title=document.getElementById('pollTitle');
+  if(!p){ title.textContent='진행 중인 투표'; area.innerHTML='<div class="empty"><span class="big">🗳️</span>아직 투표가 없어요.</div>'; return; }
+  title.textContent=p.question;
+  const voted = localStorage.getItem('voted_'+classId+'_'+p.id);
+  const total = p.options.reduce((s,o)=>s+(o.votes||0),0);
+  if(voted || isTeacher){
+    area.innerHTML = p.options.map(o=>{
+      const pct = total? Math.round((o.votes||0)/total*100):0;
+      return `<div class="opt"><div class="lbl"><span>${esc(o.label)}</span><span>${o.votes||0}표 · ${pct}%</span></div><div class="bar"><i style="width:${pct}%"></i></div></div>`;
+    }).join('') + `<p class="hint">총 ${total}표${voted?' · 참여 완료':''}</p>`;
+  }else{
+    area.innerHTML = p.options.map((o,i)=>`<button class="vote-btn" data-i="${i}">${esc(o.label)}</button>`).join('');
+    area.querySelectorAll('.vote-btn').forEach(b=>b.onclick=async()=>{
+      const i=+b.dataset.i;
+      const opts=p.options.map((o,idx)=> idx===i?{...o,votes:(o.votes||0)+1}:o);
+      await updateDoc(docRef('polls','active'),{options:opts});
+      localStorage.setItem('voted_'+classId+'_'+p.id,'1');
+      toast('투표 완료!');
+    });
+  }
+}
+
+/* =========================================================
+   실시간 구독
+   ========================================================= */
+let unsubs=[];
+function startListeners(){
+  if(!db||!classId) return;
+  unsubs.forEach(u=>u&&u()); unsubs=[];
+
+  unsubs.push(onSnapshot(query(col('notices'),orderBy('createdAt','desc')),s=>{
+    renderNotices(s.docs.map(d=>({id:d.id,...d.data()})));
+  }));
+  unsubs.push(onSnapshot(docRef('account','info'),s=> renderAccount(s.exists()?s.data():null) ));
+
+  unsubs.push(onSnapshot(query(col('suggestions'),orderBy('createdAt','desc')),s=>{
+    renderSuggestions(s.docs.map(d=>({id:d.id,...d.data()})));
+  }));
+  unsubs.push(onSnapshot(docRef('duties','info'),s=> renderDuties(s.exists()?s.data():null) ));
+  unsubs.push(onSnapshot(query(col('praises'),orderBy('createdAt','desc')),s=>{
+    renderPraise(s.docs.map(d=>({id:d.id,...d.data()})));
+  }));
+  unsubs.push(onSnapshot(docRef('polls','active'),s=> renderPoll(s.exists()?s.data():null) ));
+}
+
+/* =========================================================
+   Firebase 동적 로딩 (실패해도 UI는 작동)
+   ========================================================= */
+async function loadFirebase(){
+  const banner=document.getElementById('cfgBanner');
+  if(!firebaseConfig.projectId){
+    banner.style.display='block';
+    banner.innerHTML='<b>Firebase 설정이 필요합니다.</b> 파일 아래쪽 <code>firebaseConfig</code>에 본인 프로젝트 설정을 붙여넣으면 저장·동기화가 작동합니다. (탭·입력 화면은 지금도 둘러볼 수 있어요.)';
+    return;
+  }
+  try{
+    const appMod = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js");
+    const fs     = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    ({ initializeApp } = appMod);
+    ({ getFirestore, collection, addDoc, onSnapshot, query, orderBy,
+       doc, setDoc, getDoc, updateDoc, serverTimestamp, deleteDoc, increment } = fs);
+    db = getFirestore(initializeApp(firebaseConfig));
+    if(classId) startListeners();
+  }catch(e){
+    banner.style.display='block';
+    banner.innerHTML='<b>미리보기 모드</b> — 이 환경에서는 Firebase를 불러올 수 없어 저장·동기화가 꺼져 있습니다. GitHub Pages 등 실제 인터넷 환경에 올리면 정상 작동합니다.';
+  }
+}
+loadFirebase();
+</script>
+</body>
+</html>

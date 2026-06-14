@@ -16,7 +16,6 @@
     --c-suggest:#3b6ea5;    /* 건의 파랑 */
     --c-roles:#3f8a5b;      /* 당번 초록 */
     --c-praise:#d98a3d;     /* 칭찬 호박 */
-    --c-poll:#7a5bb5;       /* 투표 보라 */
     --c-board:#2f8a86;      /* 알림판 청록 */
     --danger:#c0533f;
     --accent:var(--c-suggest);
@@ -72,13 +71,11 @@
   .tab[data-k="suggest"] .dot{background:var(--c-suggest)}
   .tab[data-k="roles"]   .dot{background:var(--c-roles)}
   .tab[data-k="praise"]  .dot{background:var(--c-praise)}
-  .tab[data-k="poll"]    .dot{background:var(--c-poll)}
   .tab.active{color:#fff;border-color:transparent}
   .tab.active[data-k="board"]{background:var(--c-board)}
   .tab.active[data-k="suggest"]{background:var(--c-suggest)}
   .tab.active[data-k="roles"]{background:var(--c-roles)}
   .tab.active[data-k="praise"]{background:var(--c-praise)}
-  .tab.active[data-k="poll"]{background:var(--c-poll)}
   .tab.active .dot{background:#fff}
 
   /* ===== 카드/공통 ===== */
@@ -136,14 +133,6 @@
   .sticky .to{font-weight:800;font-size:13px;margin-bottom:5px}
   .sticky .body{flex:1;white-space:pre-wrap;word-break:break-word}
   .sticky .from{font-size:11.5px;text-align:right;opacity:.7;margin-top:8px}
-
-  /* 투표 막대 */
-  .opt{margin:9px 0}
-  .opt .lbl{display:flex;justify-content:space-between;font-size:14px;font-weight:600;margin-bottom:4px}
-  .bar{height:11px;background:#ece6da;border-radius:999px;overflow:hidden}
-  .bar > i{display:block;height:100%;background:var(--c-poll);border-radius:999px;width:0;transition:width .4s ease}
-  .vote-btn{width:100%;text-align:left;background:#fff;border:1.5px solid var(--line);border-radius:11px;padding:12px 14px;margin:7px 0;font:inherit;font-size:15px;font-weight:600;cursor:pointer;color:var(--ink)}
-  .vote-btn:hover{border-color:var(--c-poll);background:#faf7ff}
 
   /* 배너 */
   .banner{background:#fff4d6;border:1.5px solid #f0d98a;color:#6b531a;border-radius:12px;padding:12px 14px;font-size:13.5px;margin:14px 0;line-height:1.55}
@@ -207,7 +196,6 @@
     <button class="tab" data-k="suggest"><span class="dot"></span>건의·상담</button>
     <button class="tab" data-k="roles"><span class="dot"></span>1인1역·청소당번</button>
     <button class="tab" data-k="praise"><span class="dot"></span>칭찬</button>
-    <button class="tab" data-k="poll"><span class="dot"></span>투표</button>
   </nav>
 </header>
 
@@ -367,24 +355,6 @@
     </div>
   </section>
 
-  <!-- ===================== 투표 ===================== -->
-  <section class="panel" data-panel="poll">
-    <div class="card teacher-only">
-      <h2>새 투표 만들기</h2>
-      <label class="fld">질문</label>
-      <input type="text" id="qQuestion" placeholder="예) 반티 색깔 골라요!"/>
-      <label class="fld">선택지 (한 줄에 하나)</label>
-      <textarea id="qOptions" placeholder="네이비&#10;버건디&#10;아이보리"></textarea>
-      <div style="height:12px"></div>
-      <button class="btn" id="qCreate" style="background:var(--c-poll)">투표 시작</button>
-      <p class="hint">새 투표를 만들면 이전 투표는 종료되고 결과만 남습니다.</p>
-    </div>
-    <div class="card">
-      <h2 id="pollTitle">진행 중인 투표</h2>
-      <div id="pollArea"><div class="empty"><span class="big">🗳️</span>아직 투표가 없어요.</div></div>
-    </div>
-  </section>
-
 </div>
 
 <!-- 모달: 학급 / PIN -->
@@ -429,7 +399,7 @@ const firebaseConfig = {
 };
 
 /* ② 교사 모드 PIN (원하는 숫자로 바꾸세요) */
-const TEACHER_PIN = "20080437";
+const TEACHER_PIN = "20100666";
 /* ============================================================ */
 
 const toast = (m)=>{const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1900);};
@@ -487,7 +457,7 @@ document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
   document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
   t.classList.add('active');
   document.querySelector(`[data-panel="${t.dataset.k}"]`).classList.add('active');
-  const colors={board:'--c-board',suggest:'--c-suggest',roles:'--c-roles',praise:'--c-praise',poll:'--c-poll'};
+  const colors={board:'--c-board',suggest:'--c-suggest',roles:'--c-roles',praise:'--c-praise'};
   document.documentElement.style.setProperty('--accent',`var(${colors[t.dataset.k]})`);
 });
 
@@ -681,47 +651,6 @@ function renderPraise(items){
 }
 
 /* =========================================================
-   투표
-   ========================================================= */
-let activePoll=null;
-document.getElementById('qCreate').onclick=async()=>{
-  if(!db||!classId) return toast('학급 먼저 설정하세요');
-  const q=document.getElementById('qQuestion').value.trim();
-  const opts=document.getElementById('qOptions').value.split('\n').map(s=>s.trim()).filter(Boolean);
-  if(!q||opts.length<2) return toast('질문과 선택지 2개 이상');
-  await setDoc(docRef('polls','active'),{
-    question:q, options:opts.map(label=>({label,votes:0})),
-    createdAt:serverTimestamp(), id:Date.now().toString()
-  });
-  document.getElementById('qQuestion').value='';document.getElementById('qOptions').value='';
-  toast('투표 시작!');
-};
-function renderPoll(p){
-  activePoll=p;
-  const area=document.getElementById('pollArea');
-  const title=document.getElementById('pollTitle');
-  if(!p){ title.textContent='진행 중인 투표'; area.innerHTML='<div class="empty"><span class="big">🗳️</span>아직 투표가 없어요.</div>'; return; }
-  title.textContent=p.question;
-  const voted = localStorage.getItem('voted_'+classId+'_'+p.id);
-  const total = p.options.reduce((s,o)=>s+(o.votes||0),0);
-  if(voted || isTeacher){
-    area.innerHTML = p.options.map(o=>{
-      const pct = total? Math.round((o.votes||0)/total*100):0;
-      return `<div class="opt"><div class="lbl"><span>${esc(o.label)}</span><span>${o.votes||0}표 · ${pct}%</span></div><div class="bar"><i style="width:${pct}%"></i></div></div>`;
-    }).join('') + `<p class="hint">총 ${total}표${voted?' · 참여 완료':''}</p>`;
-  }else{
-    area.innerHTML = p.options.map((o,i)=>`<button class="vote-btn" data-i="${i}">${esc(o.label)}</button>`).join('');
-    area.querySelectorAll('.vote-btn').forEach(b=>b.onclick=async()=>{
-      const i=+b.dataset.i;
-      const opts=p.options.map((o,idx)=> idx===i?{...o,votes:(o.votes||0)+1}:o);
-      await updateDoc(docRef('polls','active'),{options:opts});
-      localStorage.setItem('voted_'+classId+'_'+p.id,'1');
-      toast('투표 완료!');
-    });
-  }
-}
-
-/* =========================================================
    실시간 구독
    ========================================================= */
 let unsubs=[];
@@ -741,7 +670,6 @@ function startListeners(){
   unsubs.push(onSnapshot(query(col('praises'),orderBy('createdAt','desc')),s=>{
     renderPraise(s.docs.map(d=>({id:d.id,...d.data()})));
   }));
-  unsubs.push(onSnapshot(docRef('polls','active'),s=> renderPoll(s.exists()?s.data():null) ));
 }
 
 /* =========================================================

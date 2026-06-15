@@ -850,6 +850,27 @@ async function loadFirebase(){
     banner.innerHTML='<b>미리보기 모드</b> — 이 환경에서는 Firebase를 불러올 수 없어 저장·동기화가 꺼져 있습니다. GitHub Pages 등 실제 인터넷 환경에 올리면 정상 작동합니다.';
   }
 }
+/* =========================================================
+   엔터키로 버튼 실행 (입력칸 → 해당 버튼 클릭)
+   ========================================================= */
+function enterToClick(inputIds, btnId){
+  inputIds.forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el) return;
+    el.addEventListener('keydown',e=>{
+      if(e.key==='Enter' && !e.isComposing){   // 한글 조합 중 엔터는 무시
+        e.preventDefault();
+        document.getElementById(btnId).click();
+      }
+    });
+  });
+}
+enterToClick(['classInput'],'classSave');
+enterToClick(['emailInput','pwInput'],'loginBtn');
+enterToClick(['gLabel','gUrl'],'gSave');
+enterToClick(['dLabel','dDate'],'dAdd');
+enterToClick(['aBank','aHolder','aNumber','aMemo'],'aSave');
+
 loadFirebase();
 </script>
 </body>

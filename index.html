@@ -369,11 +369,13 @@
 </div>
 <div class="modal-bg" id="pinModal">
   <div class="modal">
-    <h3>교사 모드</h3>
-    <p>PIN을 입력하면 건의 열람·당번 관리·투표 생성이 열립니다.</p>
-    <input type="password" id="pinInput" inputmode="numeric" placeholder="PIN" />
+    <h3>교사 로그인</h3>
+    <p>선생님 계정으로 로그인하면 건의 열람·공지·계좌·표 관리가 열립니다.</p>
+    <input type="email" id="emailInput" placeholder="이메일" autocomplete="username" />
+    <div style="height:10px"></div>
+    <input type="password" id="pwInput" placeholder="비밀번호" autocomplete="current-password" />
     <div style="height:14px"></div>
-    <button class="btn" id="pinSave">잠금 해제</button>
+    <button class="btn" id="loginBtn">로그인</button>
   </div>
 </div>
 
@@ -384,6 +386,7 @@
    (이렇게 하면 Firebase 로딩이 실패해도 탭·입력 등 UI는 그대로 작동합니다) */
 let initializeApp, getFirestore, collection, addDoc, onSnapshot, query, orderBy,
     doc, setDoc, getDoc, updateDoc, serverTimestamp, deleteDoc, increment;
+let getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged;
 
 /* ============================================================
    ① 여기에 본인 Firebase 프로젝트 설정을 붙여넣으세요
@@ -397,9 +400,6 @@ const firebaseConfig = {
   messagingSenderId: "933415283397",
   appId: "1:933415283397:web:87f93865e49a9e8d049eac"
 };
-
-/* ② 교사 모드 PIN (원하는 숫자로 바꾸세요) */
-const TEACHER_PIN = "20100666";
 /* ============================================================ */
 
 const toast = (m)=>{const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1900);};
@@ -429,25 +429,33 @@ document.getElementById('classSave').onclick=()=>{
 refreshClassLabel();
 if(!classId) openClassModal();
 
-/* ---------- 교사 모드 ---------- */
-let isTeacher = sessionStorage.getItem('isTeacher')==='1';
+/* ---------- 교사 모드 (Firebase 이메일 로그인) ---------- */
+let auth=null;          // loadFirebase에서 연결
+let isTeacher = false;  // 로그인 상태에 따라 결정
 function applyMode(){
   document.body.classList.toggle('is-teacher',isTeacher);
   const b=document.getElementById('modeBtn');
-  b.textContent = isTeacher ? '교사 모드 ✓' : '교사 모드';
+  b.textContent = isTeacher ? '교사 ✓ (로그아웃)' : '교사 로그인';
   b.classList.toggle('teacher',isTeacher);
 }
 document.getElementById('modeBtn').onclick=()=>{
-  if(isTeacher){ isTeacher=false; sessionStorage.removeItem('isTeacher'); applyMode(); toast('학생 화면'); }
+  if(isTeacher){ if(auth) signOut(auth); }      // 로그아웃 → onAuthStateChanged가 처리
   else document.getElementById('pinModal').classList.add('show');
 };
-document.getElementById('pinSave').onclick=()=>{
-  if(document.getElementById('pinInput').value===TEACHER_PIN){
-    isTeacher=true; sessionStorage.setItem('isTeacher','1'); applyMode();
+document.getElementById('loginBtn').onclick=async()=>{
+  if(!auth) return toast('연결 중이에요. 잠시 후 다시 시도하세요');
+  const email=document.getElementById('emailInput').value.trim();
+  const pw=document.getElementById('pwInput').value;
+  if(!email||!pw) return toast('이메일과 비밀번호를 입력하세요');
+  try{
+    await signInWithEmailAndPassword(auth,email,pw);
     document.getElementById('pinModal').classList.remove('show');
-    document.getElementById('pinInput').value='';
+    document.getElementById('emailInput').value='';
+    document.getElementById('pwInput').value='';
     toast('교사 모드 ✓');
-  }else toast('PIN이 달라요');
+  }catch(e){
+    toast('로그인 실패 — 이메일·비밀번호를 확인하세요');
+  }
 };
 applyMode();
 
@@ -663,9 +671,12 @@ function startListeners(){
   }));
   unsubs.push(onSnapshot(docRef('account','info'),s=> renderAccount(s.exists()?s.data():null) ));
 
-  unsubs.push(onSnapshot(query(col('suggestions'),orderBy('createdAt','desc')),s=>{
-    renderSuggestions(s.docs.map(d=>({id:d.id,...d.data()})));
-  }));
+  // 건의는 교사 로그인 상태에서만 구독 (보안 규칙상 미로그인 시 읽기 차단)
+  if(isTeacher){
+    unsubs.push(onSnapshot(query(col('suggestions'),orderBy('createdAt','desc')),s=>{
+      renderSuggestions(s.docs.map(d=>({id:d.id,...d.data()})));
+    }, err=>{ /* 권한 없음 등은 조용히 무시 */ }));
+  }
   unsubs.push(onSnapshot(docRef('duties','info'),s=> renderDuties(s.exists()?s.data():null) ));
   unsubs.push(onSnapshot(query(col('praises'),orderBy('createdAt','desc')),s=>{
     renderPraise(s.docs.map(d=>({id:d.id,...d.data()})));
@@ -685,10 +696,20 @@ async function loadFirebase(){
   try{
     const appMod = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js");
     const fs     = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    const au     = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js");
     ({ initializeApp } = appMod);
     ({ getFirestore, collection, addDoc, onSnapshot, query, orderBy,
        doc, setDoc, getDoc, updateDoc, serverTimestamp, deleteDoc, increment } = fs);
-    db = getFirestore(initializeApp(firebaseConfig));
+    ({ getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } = au);
+    const app = initializeApp(firebaseConfig);
+    db = getFirestore(app);
+    auth = getAuth(app);
+    // 로그인 상태가 바뀌면 교사 모드 on/off + 리스너 재구독(건의 열람 권한 반영)
+    onAuthStateChanged(auth,(user)=>{
+      isTeacher = !!user;
+      applyMode();
+      if(classId) startListeners();
+    });
     if(classId) startListeners();
   }catch(e){
     banner.style.display='block';

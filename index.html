@@ -308,19 +308,15 @@
     <!-- 학생: 작성만 -->
     <div class="card not-teacher" id="suggestWrite">
       <h2>건의함 · 상담 신청</h2>
-      <p class="sub">선생님만 볼 수 있어요. 익명으로 남겨도 괜찮아요.</p>
+      <p class="sub">선생님만 볼 수 있어요.</p>
 
-      <div class="seg" id="anonSeg">
-        <button class="on" data-anon="1">익명으로</button>
-        <button data-anon="0">이름 밝히기</button>
-      </div>
-      <div id="nameWrap" style="display:none">
-        <label class="fld">이름</label>
-        <input type="text" id="sName" placeholder="이름" />
-      </div>
+      <div class="banner" style="margin-top:0">긴급하거나 민감한 사항은 선생님께 직접 이야기해주세요.</div>
+
+      <label class="fld">이름</label>
+      <input type="text" id="sName" placeholder="이름" />
 
       <label class="fld">하고 싶은 말</label>
-      <textarea id="sText" placeholder="건의하고 싶은 것, 힘든 일, 하고 싶은 말을 자유롭게 적어주세요."></textarea>
+      <textarea id="sText" placeholder="건의하고 싶은 것, 하고 싶은 말을 자유롭게 적어주세요."></textarea>
 
       <label class="chk" style="margin-top:10px">
         <input type="checkbox" id="sCounsel" /> 선생님과 따로 상담하고 싶어요
@@ -647,31 +643,25 @@ function renderDday(items){
 }
 
 /* =========================================================
-   건의 · 상담
+   건의 · 상담 (실명)
    ========================================================= */
-// 익명/실명 토글
-document.getElementById('anonSeg').onclick=e=>{
-  const b=e.target.closest('button'); if(!b)return;
-  document.querySelectorAll('#anonSeg button').forEach(x=>x.classList.remove('on'));
-  b.classList.add('on');
-  document.getElementById('nameWrap').style.display = b.dataset.anon==='0'?'block':'none';
-};
 document.getElementById('sCounsel').onchange=e=>{
   document.getElementById('slotWrap').style.display=e.target.checked?'block':'none';
 };
 document.getElementById('sSubmit').onclick=async()=>{
   if(!db) return toast('Firebase 설정이 필요해요');
   if(!classId) return openClassModal();
+  const name=document.getElementById('sName').value.trim();
   const text=document.getElementById('sText').value.trim();
+  if(!name) return toast('이름을 적어주세요');
   if(!text) return toast('내용을 적어주세요');
-  const anon=document.querySelector('#anonSeg button.on').dataset.anon==='1';
   const counsel=document.getElementById('sCounsel').checked;
   await addDoc(col('suggestions'),{
-    text, anonymous:anon,
-    name: anon?'':document.getElementById('sName').value.trim(),
+    text, anonymous:false, name,
     counsel, slot: counsel?document.getElementById('sSlot').value:'',
     resolved:false, createdAt:serverTimestamp()
   });
+  document.getElementById('sName').value='';
   document.getElementById('sText').value='';
   document.getElementById('sCounsel').checked=false;
   document.getElementById('slotWrap').style.display='none';

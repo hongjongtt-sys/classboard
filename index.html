@@ -119,6 +119,7 @@
   .badge.anon{background:#eef2f8;color:#4a5b73}
   .badge.real{background:#e9f3ec;color:#2f6b46}
   .badge.counsel{background:#fbeede;color:#9a6320}
+  .badge.cat{background:#e8eafc;color:#4a51a8}
   .badge.done{background:#eee;color:#888}
 
   /* 칭찬 = 포스트잇 느낌 (이 앱의 시그니처) */
@@ -314,6 +315,15 @@
 
       <label class="fld">이름</label>
       <input type="text" id="sName" placeholder="이름" />
+
+      <label class="fld">분류</label>
+      <select id="sCategory">
+        <option value="학업">학업</option>
+        <option value="진로">진로</option>
+        <option value="자율">자율</option>
+        <option value="학교생활">학교생활</option>
+        <option value="기타">기타</option>
+      </select>
 
       <label class="fld">하고 싶은 말</label>
       <textarea id="sText" placeholder="건의하고 싶은 것, 하고 싶은 말을 자유롭게 적어주세요."></textarea>
@@ -658,11 +668,13 @@ document.getElementById('sSubmit').onclick=async()=>{
   const counsel=document.getElementById('sCounsel').checked;
   await addDoc(col('suggestions'),{
     text, anonymous:false, name,
+    category:document.getElementById('sCategory').value,
     counsel, slot: counsel?document.getElementById('sSlot').value:'',
     resolved:false, createdAt:serverTimestamp()
   });
   document.getElementById('sName').value='';
   document.getElementById('sText').value='';
+  document.getElementById('sCategory').selectedIndex=0;
   document.getElementById('sCounsel').checked=false;
   document.getElementById('slotWrap').style.display='none';
   toast('보냈어요. 고마워요 🙂');
@@ -674,10 +686,11 @@ function renderSuggestions(items){
   if(!items.length){box.innerHTML='<div class="empty"><span class="big">📮</span>아직 들어온 글이 없어요.</div>';return;}
   box.innerHTML=items.map(it=>{
     const who = it.anonymous?'<span class="badge anon">익명</span>':`<span class="badge real">${esc(it.name||'이름없음')}</span>`;
+    const cat = it.category?`<span class="badge cat">${esc(it.category)}</span>`:'';
     const c = it.counsel?`<span class="badge counsel">상담 · ${esc(it.slot||'시간미정')}</span>`:'';
     const done = it.resolved?'<span class="badge done">확인됨</span>':'';
     return `<div class="item">
-      <div class="meta">${who}${c}${done}<span style="margin-left:auto">${fmt(it.createdAt)}</span></div>
+      <div class="meta">${who}${cat}${c}${done}<span style="margin-left:auto">${fmt(it.createdAt)}</span></div>
       <div style="margin:8px 0;white-space:pre-wrap;word-break:break-word">${esc(it.text)}</div>
       <div class="row">
         <button class="btn small ghost" data-act="toggle" data-id="${it.id}">${it.resolved?'확인 취소':'확인 처리'}</button>
@@ -695,9 +708,9 @@ function renderSuggestions(items){
 document.getElementById('sExport').onclick=()=>{
   if(!lastSuggestions.length) return toast('내보낼 건의가 없어요');
   const q=(v)=>'"'+String(v??'').replace(/"/g,'""')+'"';   // CSV 셀 안전 처리
-  const header=['날짜','익명여부','이름','상담신청','희망시간','확인여부','내용'];
+  const header=['날짜','이름','분류','상담신청','희망시간','확인여부','내용'];
   const rows=lastSuggestions.map(it=>[
-    fmt(it.createdAt), it.anonymous?'익명':'실명', it.anonymous?'':(it.name||''),
+    fmt(it.createdAt), it.anonymous?'':(it.name||''), it.category||'',
     it.counsel?'O':'', it.counsel?(it.slot||''):'', it.resolved?'확인됨':'', it.text||''
   ].map(q).join(','));
   const csv='\uFEFF'+[header.map(q).join(','),...rows].join('\r\n');  // BOM: 엑셀 한글 깨짐 방지

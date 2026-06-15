@@ -346,6 +346,8 @@
       <div class="card">
         <h2>들어온 건의 · 상담</h2>
         <p class="sub">상담 신청 글에는 노란 배지가 붙습니다.</p>
+        <button class="btn small ghost" id="sExport" style="width:auto">엑셀(CSV)로 내보내기</button>
+        <div style="height:12px"></div>
         <div id="suggestList"></div>
       </div>
     </div>
@@ -675,7 +677,9 @@ document.getElementById('sSubmit').onclick=async()=>{
   document.getElementById('slotWrap').style.display='none';
   toast('보냈어요. 고마워요 🙂');
 };
+let lastSuggestions=[];
 function renderSuggestions(items){
+  lastSuggestions=items;
   const box=document.getElementById('suggestList');
   if(!items.length){box.innerHTML='<div class="empty"><span class="big">📮</span>아직 들어온 글이 없어요.</div>';return;}
   box.innerHTML=items.map(it=>{
@@ -697,6 +701,23 @@ function renderSuggestions(items){
     else{ const cur=items.find(x=>x.id===id); await updateDoc(docRef('suggestions',id),{resolved:!cur.resolved}); }
   });
 }
+// 건의 → CSV 내보내기 (엑셀에서 열림)
+document.getElementById('sExport').onclick=()=>{
+  if(!lastSuggestions.length) return toast('내보낼 건의가 없어요');
+  const q=(v)=>'"'+String(v??'').replace(/"/g,'""')+'"';   // CSV 셀 안전 처리
+  const header=['날짜','익명여부','이름','상담신청','희망시간','확인여부','내용'];
+  const rows=lastSuggestions.map(it=>[
+    fmt(it.createdAt), it.anonymous?'익명':'실명', it.anonymous?'':(it.name||''),
+    it.counsel?'O':'', it.counsel?(it.slot||''):'', it.resolved?'확인됨':'', it.text||''
+  ].map(q).join(','));
+  const csv='\uFEFF'+[header.map(q).join(','),...rows].join('\r\n');  // BOM: 엑셀 한글 깨짐 방지
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`건의_${classId}_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click(); URL.revokeObjectURL(a.href);
+  toast('내보냈어요');
+};
 
 /* =========================================================
    1인1역 (표 또는 이미지)

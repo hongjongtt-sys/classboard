@@ -316,10 +316,13 @@
     <div class="card quad">
       <h2>D-day</h2>
       <div class="teacher-only">
+        <input type="text" id="dLabel" placeholder="일정 이름 (예: 기말고사)" />
+        <div style="height:8px"></div>
         <div class="row">
-          <input type="text" id="dLabel" placeholder="일정 이름 (예: 중간고사)" style="flex:1.4" />
-          <input type="date" id="dDate" style="flex:1" />
+          <div><label class="fld" style="margin-top:0">시작일</label><input type="date" id="dDate" /></div>
+          <div><label class="fld" style="margin-top:0">종료일 (선택)</label><input type="date" id="dEnd" /></div>
         </div>
+        <p class="hint">기말고사처럼 며칠간이면 종료일까지 넣으세요. 하루 일정이면 비워두면 됩니다.</p>
         <div style="height:8px"></div>
         <button class="btn small" id="dAdd" style="background:var(--c-board)">일정 추가</button>
         <hr class="soft" />
@@ -648,10 +651,14 @@ function renderGrade(g){
 document.getElementById('dAdd').onclick=async()=>{
   if(!db||!classId) return toast('학급 먼저 설정하세요');
   const label=document.getElementById('dLabel').value.trim();
-  const date=document.getElementById('dDate').value;   // YYYY-MM-DD
-  if(!label||!date) return toast('일정 이름과 날짜를 입력하세요');
-  await addDoc(col('events'),{label,date,createdAt:serverTimestamp()});
-  document.getElementById('dLabel').value='';document.getElementById('dDate').value='';
+  const date=document.getElementById('dDate').value;   // 시작일 YYYY-MM-DD
+  const end=document.getElementById('dEnd').value;      // 종료일(선택)
+  if(!label||!date) return toast('일정 이름과 시작일을 입력하세요');
+  if(end && end<date) return toast('종료일이 시작일보다 빠를 수 없어요');
+  await addDoc(col('events'),{label,date,end:end||'',createdAt:serverTimestamp()});
+  document.getElementById('dLabel').value='';
+  document.getElementById('dDate').value='';
+  document.getElementById('dEnd').value='';
   toast('일정을 추가했어요');
 };
 function daysUntil(dateStr){
@@ -659,18 +666,22 @@ function daysUntil(dateStr){
   const target=new Date(dateStr+'T00:00:00');
   return Math.round((target-today)/86400000);
 }
+function fmtMD(dateStr){ const d=new Date(dateStr+'T00:00:00'); return `${d.getMonth()+1}/${d.getDate()}`; }
 function renderDday(items){
   const box=document.getElementById('ddayList');
-  if(!items.length){ box.innerHTML='<div class="empty"><span class="big">📅</span>아직 일정이 없어요.</div>'; return; }
-  items.sort((a,b)=> a.date.localeCompare(b.date));
-  box.innerHTML=items.map(it=>{
-    const n=daysUntil(it.date);
+  // 지난 일정 자동 숨김 (종료일이 있으면 종료일, 없으면 시작일 기준 — 그날까지는 표시)
+  const visible=items.filter(it=> daysUntil(it.end || it.date) >= 0 );
+  if(!visible.length){ box.innerHTML='<div class="empty"><span class="big">📅</span>다가오는 일정이 없어요.</div>'; return; }
+  visible.sort((a,b)=> a.date.localeCompare(b.date));
+  box.innerHTML=visible.map(it=>{
+    const n=daysUntil(it.date);                 // 시작일까지 남은 일수
+    const dateLabel = it.end ? `${fmtMD(it.date)}~${fmtMD(it.end)}` : fmtMD(it.date);
     let txt,cls;
-    if(n>0){ txt='D-'+n; cls=n<=7?'soon':''; }
-    else if(n===0){ txt='D-DAY'; cls='today'; }
-    else { txt='D+'+(-n); cls='past'; }
+    if(n>0){ txt='D-'+n; cls=n<=7?'soon':''; }          // 시작 전
+    else if(n===0){ txt='D-DAY'; cls='today'; }          // 시작 당일
+    else { txt='진행 중'; cls='today'; }                  // 기간 중 (종료일 전까지)
     return `<div class="dday">
-      <div class="info"><div class="name">${esc(it.label)}</div><div class="date">${esc(it.date)}</div></div>
+      <div class="info"><div class="name">${esc(it.label)}</div><div class="date">${esc(dateLabel)}</div></div>
       <span class="count ${cls}">${txt}</span>
       ${isTeacher?`<button class="del" data-id="${it.id}" title="삭제">×</button>`:''}
     </div>`;
@@ -897,7 +908,7 @@ function enterToClick(inputIds, btnId){
 enterToClick(['classInput'],'classSave');
 enterToClick(['emailInput','pwInput'],'loginBtn');
 enterToClick(['gLabel','gUrl'],'gSave');
-enterToClick(['dLabel','dDate'],'dAdd');
+enterToClick(['dLabel','dDate','dEnd'],'dAdd');
 enterToClick(['aBank','aHolder','aNumber','aMemo'],'aSave');
 
 loadFirebase();

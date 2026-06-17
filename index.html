@@ -7,23 +7,23 @@
 <style>
   @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
   :root{
-    --ink:#1f2a44;          /* 잉크 네이비 */
-    --ink-soft:#525c75;
-    --paper:#f6f3ea;        /* 따뜻한 종이 */
-    --paper-card:#fffefb;
-    --line:#ece5d6;
-    --line-strong:#e1d9c7;
-    --muted:#94907f;
+    --ink:#1e2a3a;          /* 쿨 네이비 */
+    --ink-soft:#4a5568;
+    --paper:#f1f6fb;        /* 맑은 하늘빛 흰색 */
+    --paper-card:#ffffff;
+    --line:#e5edf5;
+    --line-strong:#d7e3f0;
+    --muted:#8a97a8;
     /* 탭별 기능 색 (기능 구분 = 정보) */
-    --c-suggest:#39658f;    /* 건의 파랑 */
-    --c-roles:#3c8159;      /* 당번 초록 */
-    --c-praise:#cf8438;     /* 칭찬 호박 */
-    --c-board:#2f827e;      /* 알림판 청록 */
-    --danger:#bd4f3c;
-    --accent:var(--c-suggest);
+    --c-board:#2d7fd4;      /* 알림판 하늘 블루 */
+    --c-suggest:#2f9e93;    /* 건의 청록 */
+    --c-roles:#3f9e5a;      /* 1인1역 초록 */
+    --c-praise:#e0902f;     /* 칭찬 호박 */
+    --danger:#d4574a;
+    --accent:var(--c-board);
     --radius:16px;
-    --shadow:0 1px 2px rgba(31,42,68,.04), 0 10px 26px -10px rgba(31,42,68,.16);
-    --shadow-sm:0 1px 2px rgba(31,42,68,.05), 0 4px 12px -6px rgba(31,42,68,.12);
+    --shadow:0 1px 2px rgba(30,42,58,.04), 0 10px 26px -10px rgba(45,127,212,.18);
+    --shadow-sm:0 1px 2px rgba(30,42,58,.05), 0 4px 12px -6px rgba(45,127,212,.14);
     --ease:cubic-bezier(.4,0,.2,1);
   }
   *{box-sizing:border-box}
@@ -31,7 +31,7 @@
   body{
     font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;
     background:
-      radial-gradient(1200px 600px at 50% -200px, #fbf9f2 0%, transparent 70%),
+      radial-gradient(1200px 600px at 50% -200px, #eaf3fd 0%, transparent 70%),
       var(--paper);
     background-attachment:fixed;
     color:var(--ink);
@@ -45,10 +45,10 @@
   /* ===== 헤더 ===== */
   header.app{
     position:sticky;top:0;z-index:20;
-    background:linear-gradient(180deg, #243152 0%, var(--ink) 100%);
+    background:linear-gradient(125deg, #4aa3e8 0%, #2d7fd4 55%, #2f6fc4 100%);
     color:#fff;
-    border-bottom:1px solid rgba(0,0,0,.2);
-    box-shadow:0 8px 24px -16px rgba(31,42,68,.5);
+    border-bottom:1px solid rgba(0,0,0,.08);
+    box-shadow:0 10px 26px -16px rgba(45,127,212,.7);
   }
   .head-inner{max-width:860px;margin:0 auto;padding:15px 16px;display:flex;align-items:center;gap:12px}
   .brand{display:flex;flex-direction:column;gap:2px;min-width:0}

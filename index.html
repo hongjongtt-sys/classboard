@@ -7,18 +7,18 @@
 <style>
   @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
   :root{
-    --ink:#1e2a3a;          /* 쿨 네이비 */
+    --ink:#1e2a3a;
     --ink-soft:#4a5568;
-    --paper:#f1f6fb;        /* 맑은 하늘빛 흰색 */
+    --paper:#f1f6fb;
     --paper-card:#ffffff;
     --line:#e5edf5;
     --line-strong:#d7e3f0;
     --muted:#8a97a8;
-    /* 탭별 기능 색 (기능 구분 = 정보) */
-    --c-board:#2d7fd4;      /* 알림판 하늘 블루 */
-    --c-suggest:#2f9e93;    /* 건의 청록 */
-    --c-roles:#3f9e5a;      /* 1인1역 초록 */
-    --c-praise:#e0902f;     /* 칭찬 호박 */
+    --c-board:#2d7fd4;
+    --c-suggest:#2f9e93;
+    --c-roles:#3f9e5a;
+    --c-praise:#e0902f;
+    --c-report:#6c5ce7;
     --danger:#d4574a;
     --accent:var(--c-board);
     --radius:16px;
@@ -41,8 +41,6 @@
     letter-spacing:-.01em;
   }
   .wrap{max-width:860px;margin:0 auto;padding:0 16px 96px}
-
-  /* ===== 헤더 ===== */
   header.app{
     position:sticky;top:0;z-index:20;
     background:linear-gradient(125deg, #4aa3e8 0%, #2d7fd4 55%, #2f6fc4 100%);
@@ -69,8 +67,6 @@
   }
   .mode-btn:hover{transform:translateY(-1px)}
   .mode-btn.teacher{background:#ffe6a0;color:#5b4a18}
-
-  /* ===== 탭 ===== */
   nav.tabs{display:flex;gap:7px;overflow-x:auto;padding:14px 4px 4px;scrollbar-width:none}
   nav.tabs::-webkit-scrollbar{display:none}
   .tab{
@@ -87,14 +83,14 @@
   .tab[data-k="suggest"] .dot{background:var(--c-suggest)}
   .tab[data-k="roles"]   .dot{background:var(--c-roles)}
   .tab[data-k="praise"]  .dot{background:var(--c-praise)}
+  .tab[data-k="report"]  .dot{background:var(--c-report)}
   .tab.active{color:#fff;border-color:transparent;box-shadow:0 6px 16px -6px rgba(31,42,68,.4)}
   .tab.active[data-k="board"]{background:var(--c-board)}
   .tab.active[data-k="suggest"]{background:var(--c-suggest)}
   .tab.active[data-k="roles"]{background:var(--c-roles)}
   .tab.active[data-k="praise"]{background:var(--c-praise)}
+  .tab.active[data-k="report"]{background:var(--c-report)}
   .tab.active .dot{background:#fff}
-
-  /* ===== 카드/공통 ===== */
   .panel{display:none;animation:fade .3s var(--ease)}
   .panel.active{display:block}
   @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
@@ -128,10 +124,8 @@
   .btn.danger{background:var(--danger);box-shadow:0 4px 14px -6px color-mix(in srgb,var(--danger) 70%,transparent)}
   .chk{display:flex;align-items:center;gap:9px;font-size:14.5px;font-weight:600;color:var(--ink-soft);cursor:pointer;padding:6px 0}
   .chk input{width:18px;height:18px;accent-color:var(--accent)}
-
   .empty{text-align:center;color:var(--muted);font-size:14px;padding:32px 10px}
   .empty .big{font-size:32px;display:block;margin-bottom:8px;opacity:.55}
-
   .item{background:var(--paper-card);border:1px solid var(--line);border-radius:13px;padding:15px;margin:10px 0;box-shadow:var(--shadow-sm)}
   .item .meta{font-size:12px;color:var(--muted);display:flex;gap:7px;flex-wrap:wrap;align-items:center}
   .badge{font-size:11px;font-weight:800;padding:3px 9px;border-radius:999px;letter-spacing:.01em}
@@ -140,8 +134,6 @@
   .badge.counsel{background:#fbeede;color:#9a6320}
   .badge.cat{background:#e8eafc;color:#4a51a8}
   .badge.done{background:#ededea;color:#888}
-
-  /* 칭찬 = 포스트잇 느낌 (이 앱의 시그니처) */
   .praise-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:13px;margin-top:6px}
   .sticky{
     border-radius:3px 16px 5px 14px;padding:15px 15px 16px;position:relative;
@@ -155,46 +147,33 @@
   .sticky .to{font-weight:800;font-size:13px;margin-bottom:5px}
   .sticky .body{flex:1;white-space:pre-wrap;word-break:break-word}
   .sticky .from{font-size:11.5px;text-align:right;opacity:.7;margin-top:8px}
-
-  /* 배너 */
   .banner{background:#fdf3d4;border:1px solid #f0d98a;color:#6b531a;border-radius:12px;padding:12px 14px;font-size:13.5px;margin:14px 0;line-height:1.55}
   .banner b{color:#5b4512}
-
-  /* 모달 */
   .modal-bg{position:fixed;inset:0;background:rgba(31,42,68,.42);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;z-index:50;padding:18px}
   .modal-bg.show{display:flex}
   .modal{background:var(--paper-card);border-radius:18px;padding:24px;max-width:380px;width:100%;box-shadow:0 24px 60px -12px rgba(31,42,68,.4);border:1px solid var(--line);animation:pop .22s var(--ease)}
   @keyframes pop{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
   .modal h3{margin:0 0 6px;font-size:17px;letter-spacing:-.02em}
   .modal p{margin:0 0 14px;font-size:13.5px;color:var(--muted);line-height:1.55}
-
   .seg{display:flex;gap:6px;margin:6px 0 2px}
   .seg button{flex:1;border:1px solid var(--line-strong);background:#fff;border-radius:10px;padding:9px;font:inherit;font-weight:700;font-size:13.5px;color:var(--ink-soft);cursor:pointer;transition:.15s var(--ease)}
   .seg button.on{background:var(--accent);color:#fff;border-color:transparent}
-
   .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:12px 22px;border-radius:999px;font-size:14px;font-weight:600;opacity:0;transition:.28s var(--ease);z-index:60;pointer-events:none;box-shadow:0 12px 30px -8px rgba(31,42,68,.5)}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
   .teacher-only{display:none}
   body.is-teacher .teacher-only{display:block}
   .hint{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.5}
   hr.soft{border:none;border-top:1px solid var(--line);margin:16px 0}
-
-  /* 접근성: 키보드 포커스 + 모션 최소화 */
   a:focus-visible,button:focus-visible,.tab:focus-visible,.mode-btn:focus-visible,.classpill:focus-visible{outline:2.5px solid var(--accent);outline-offset:2px}
   @media (prefers-reduced-motion: reduce){ *{animation-duration:.01ms!important;transition-duration:.01ms!important} }
-  /* 알림판 2×2 그리드 */
   .board-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
   .board-grid .quad{margin:0}
   @media(max-width:640px){ .board-grid{grid-template-columns:1fr} }
   .scroll-box{max-height:280px;overflow-y:auto;margin-top:4px}
-
-  /* 성적 확인 버튼 */
   .grade-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;
     background:var(--c-board);color:#fff;font-weight:700;font-size:16px;text-decoration:none;
     padding:18px;border-radius:12px}
   .grade-btn:hover{filter:brightness(1.05)}
-
-  /* D-day 항목 */
   .dday{display:flex;align-items:center;justify-content:space-between;gap:10px;
     background:#fff;border:1px solid var(--line-strong);border-radius:10px;padding:12px 14px;margin:8px 0}
   .dday .info .name{font-weight:700;font-size:15px}
@@ -204,8 +183,6 @@
   .dday .count.today{color:var(--c-praise)}
   .dday .count.past{color:var(--muted)}
   .dday .del{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:0 2px}
-
-  /* 1인1역 표 */
   .dtable-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
   table.dtable{border-collapse:collapse;width:100%;font-size:14px;min-width:max-content}
   table.dtable th,table.dtable td{border:1px solid var(--line);padding:9px 12px;text-align:left;white-space:nowrap}
@@ -213,15 +190,11 @@
   table.dtable tr:nth-child(even) td{background:#f4f8f5}
   table.dtable td:first-child{font-weight:700;color:var(--ink-soft)}
   .duty-img{display:block;width:100%;height:auto;border-radius:10px;border:1px solid var(--line)}
-
-  /* 알림판: 공지 */
   .notice{background:#fff;border:1px solid var(--line-strong);border-left:4px solid var(--c-board);border-radius:10px;padding:13px 14px;margin:10px 0}
   .notice .body{white-space:pre-wrap;word-break:break-word;font-size:15px}
   .notice .when{font-size:12px;color:var(--muted);margin-top:7px;display:flex;align-items:center;gap:8px}
   .notice.pin{border-left-color:var(--c-praise);background:#fffaf0}
   .pinmark{font-size:11px;font-weight:800;color:var(--c-praise)}
-
-  /* 학급비 계좌 안내 */
   .acct-box{background:var(--ink);color:#fff;border-radius:14px;padding:18px 20px}
   .acct-bank{font-size:13px;color:rgba(255,255,255,.7)}
   .acct-holder{color:rgba(255,255,255,.55)}
@@ -231,7 +204,6 @@
 </style>
 </head>
 <body>
-
 <header class="app">
   <div class="head-inner">
     <div class="brand">
@@ -247,6 +219,7 @@
     <button class="tab" data-k="suggest"><span class="dot"></span>건의·상담</button>
     <button class="tab" data-k="roles"><span class="dot"></span>1인1역</button>
     <button class="tab" data-k="praise"><span class="dot"></span>칭찬</button>
+    <button class="tab" data-k="report"><span class="dot"></span>보고서</button>
   </nav>
 </header>
 
@@ -256,11 +229,10 @@
     <b>Firebase 설정이 필요합니다.</b> 파일 아래쪽 <code>firebaseConfig</code> 부분에 본인 프로젝트 설정을 붙여넣어야 동기화가 작동합니다.
   </div>
 
-  <!-- ===================== 알림판 (공지 + 학급 계좌) ===================== -->
+  <!-- ===================== 알림판 ===================== -->
   <section class="panel active" data-panel="board">
    <div class="board-grid">
 
-    <!-- Q1: 학급비 계좌 -->
     <div class="card quad">
       <h2>학급비 계좌 안내</h2>
       <div id="acctView">
@@ -282,7 +254,6 @@
       </div>
     </div>
 
-    <!-- Q2: 성적 확인 사이트 -->
     <div class="card quad">
       <h2>성적 확인</h2>
       <div id="gradeView">
@@ -299,7 +270,6 @@
       </div>
     </div>
 
-    <!-- Q3: 공지사항 (스크롤) -->
     <div class="card quad">
       <h2>공지사항</h2>
       <div class="teacher-only">
@@ -312,7 +282,6 @@
       <div id="noticeList" class="scroll-box"><div class="empty"><span class="big">📢</span>아직 공지가 없어요.</div></div>
     </div>
 
-    <!-- Q4: D-day (스크롤) -->
     <div class="card quad">
       <h2>D-day</h2>
       <div class="teacher-only">
@@ -335,16 +304,12 @@
 
   <!-- ===================== 건의·상담 ===================== -->
   <section class="panel" data-panel="suggest">
-    <!-- 학생: 작성만 -->
     <div class="card not-teacher" id="suggestWrite">
       <h2>건의함 · 상담 신청</h2>
       <p class="sub">선생님만 볼 수 있어요.</p>
-
       <div class="banner" style="margin-top:0">긴급하거나 민감한 사항은 선생님께 직접 이야기해주세요.</div>
-
       <label class="fld">이름</label>
       <input type="text" id="sName" placeholder="이름" />
-
       <label class="fld">분류</label>
       <select id="sCategory">
         <option value="학업">학업 (성적, 공부 방법)</option>
@@ -353,10 +318,8 @@
         <option value="학교생활">학교생활 (기타 건의)</option>
         <option value="기타">기타</option>
       </select>
-
       <label class="fld">하고 싶은 말</label>
       <textarea id="sText" placeholder="건의하고 싶은 것, 하고 싶은 말을 자유롭게 적어주세요."></textarea>
-
       <label class="chk" style="margin-top:10px">
         <input type="checkbox" id="sCounsel" /> 선생님과 따로 상담하고 싶어요
       </label>
@@ -370,13 +333,11 @@
           <option>아무 때나 괜찮아요</option>
         </select>
       </div>
-
       <div style="height:14px"></div>
       <button class="btn" id="sSubmit">보내기</button>
       <p class="hint">보낸 내용은 다른 친구에게 보이지 않아요.</p>
     </div>
 
-    <!-- 교사: 열람 -->
     <div class="teacher-only" id="suggestRead">
       <div class="card">
         <h2>들어온 건의 · 상담</h2>
@@ -390,8 +351,6 @@
 
   <!-- ===================== 1인1역 ===================== -->
   <section class="panel" data-panel="roles">
-
-    <!-- 1인1역 (고정) -->
     <div class="card">
       <h2>1인1역</h2>
       <p class="sub">우리 반 1인1역 담당표예요.</p>
@@ -408,7 +367,6 @@
         <button class="btn small" id="roleSave" style="background:var(--c-roles)">1인1역 저장</button>
       </div>
     </div>
-
   </section>
 
   <!-- ===================== 칭찬 ===================== -->
@@ -431,9 +389,13 @@
     </div>
   </section>
 
+  <!-- ===================== 보고서 ===================== -->
+  <section class="panel" data-panel="report">
+    <div id="reportRoot"></div>
+  </section>
+
 </div>
 
-<!-- 모달: 학급 / PIN -->
 <div class="modal-bg" id="classModal">
   <div class="modal">
     <h3>학급 코드</h3>
@@ -458,16 +420,10 @@
 <div class="toast" id="toast"></div>
 
 <script type="module">
-/* Firebase 함수들은 아래 loadFirebase()에서 동적으로 불러와 채웁니다.
-   (이렇게 하면 Firebase 로딩이 실패해도 탭·입력 등 UI는 그대로 작동합니다) */
-let initializeApp, getFirestore, collection, addDoc, onSnapshot, query, orderBy,
+let initializeApp, getFirestore, collection, addDoc, onSnapshot, query, orderBy, where,
     doc, setDoc, getDoc, updateDoc, serverTimestamp, deleteDoc, increment;
 let getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged;
 
-/* ============================================================
-   ① 여기에 본인 Firebase 프로젝트 설정을 붙여넣으세요
-   (Firebase 콘솔 > 프로젝트 설정 > 내 앱 > SDK 설정 및 구성)
-   ============================================================ */
 const firebaseConfig = {
   apiKey: "AIzaSyDEVJk1GOGjJdBfCJjuMyeXmzzKIw4wlKI",
   authDomain: "classboard-4b9da.firebaseapp.com",
@@ -476,12 +432,25 @@ const firebaseConfig = {
   messagingSenderId: "933415283397",
   appId: "1:933415283397:web:87f93865e49a9e8d049eac"
 };
-/* ============================================================ */
 
 const toast = (m)=>{const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1900);};
 
-// Firebase는 loadFirebase()에서 동적으로 연결됩니다.
 let db=null;
+
+/* ---------- 보고서 상태 변수 (applyMode보다 먼저 선언되어야 함) ---------- */
+let studentNo = localStorage.getItem('rptStudentNo')||'';
+let studentName = localStorage.getItem('rptStudentName')||'';
+let allActivities = [];
+let rNav = {area:null, activityId:null, sessionId:null};
+let tNav = {tab:'manage', area:'진로', manageActivityId:null, activityId:null, selectedStudentNo:''};
+let curSubs = {};
+let curSubsUnsub = null;
+let curRecord = null;
+let curRecordUnsub = null;
+let statusSubs = [];
+let statusUnsub = null;
+let teacherRecord = null;
+let teacherRecordUnsub = null;
 
 /* ---------- 학급 코드 ---------- */
 const params=new URLSearchParams(location.search);
@@ -505,17 +474,18 @@ document.getElementById('classSave').onclick=()=>{
 refreshClassLabel();
 if(!classId) openClassModal();
 
-/* ---------- 교사 모드 (Firebase 이메일 로그인) ---------- */
-let auth=null;          // loadFirebase에서 연결
-let isTeacher = false;  // 로그인 상태에 따라 결정
+/* ---------- 교사 모드 ---------- */
+let auth=null;
+let isTeacher = false;
 function applyMode(){
   document.body.classList.toggle('is-teacher',isTeacher);
   const b=document.getElementById('modeBtn');
   b.textContent = isTeacher ? '교사 ✓ (로그아웃)' : '교사 로그인';
   b.classList.toggle('teacher',isTeacher);
+  if(document.getElementById('reportRoot')) renderReportPanel();
 }
 document.getElementById('modeBtn').onclick=()=>{
-  if(isTeacher){ if(auth) signOut(auth); }      // 로그아웃 → onAuthStateChanged가 처리
+  if(isTeacher){ if(auth) signOut(auth); }
   else document.getElementById('pinModal').classList.add('show');
 };
 document.getElementById('loginBtn').onclick=async()=>{
@@ -541,11 +511,11 @@ document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
   document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
   t.classList.add('active');
   document.querySelector(`[data-panel="${t.dataset.k}"]`).classList.add('active');
-  const colors={board:'--c-board',suggest:'--c-suggest',roles:'--c-roles',praise:'--c-praise'};
+  const colors={board:'--c-board',suggest:'--c-suggest',roles:'--c-roles',praise:'--c-praise',report:'--c-report'};
   document.documentElement.style.setProperty('--accent',`var(${colors[t.dataset.k]})`);
+  if(t.dataset.k==='report') renderReportPanel();
 });
 
-/* 모달 바깥 클릭 닫기 */
 document.querySelectorAll('.modal-bg').forEach(m=>m.onclick=e=>{if(e.target===m)m.classList.remove('show')});
 
 const col=(name)=> collection(db,'classes',classId,name);
@@ -553,9 +523,7 @@ const docRef=(name,id)=> doc(db,'classes',classId,name,id);
 const fmt=(ts)=>{ if(!ts) return ''; const d=ts.toDate?ts.toDate():new Date(ts); return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; };
 const esc=(s='')=> s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 
-/* =========================================================
-   알림판 — 공지사항
-   ========================================================= */
+/* ===== 알림판 — 공지 ===== */
 document.getElementById('nAdd').onclick=async()=>{
   if(!db||!classId) return toast('학급 먼저 설정하세요');
   const text=document.getElementById('nText').value.trim();
@@ -578,9 +546,7 @@ function renderNotices(items){
   if(isTeacher) box.querySelectorAll('button[data-id]').forEach(b=>b.onclick=async()=>{ if(confirm('공지를 삭제할까요?')) await deleteDoc(docRef('notices',b.dataset.id)); });
 }
 
-/* =========================================================
-   알림판 — 학급비 계좌 안내
-   ========================================================= */
+/* ===== 알림판 — 계좌 ===== */
 document.getElementById('aSave').onclick=async()=>{
   if(!db||!classId) return toast('학급 먼저 설정하세요');
   const number=document.getElementById('aNumber').value.trim();
@@ -619,15 +585,13 @@ function renderAccount(a){
   }
 }
 
-/* =========================================================
-   알림판 — 성적 확인 사이트 링크
-   ========================================================= */
+/* ===== 알림판 — 성적 링크 ===== */
 document.getElementById('gSave').onclick=async()=>{
   if(!db||!classId) return toast('학급 먼저 설정하세요');
   let url=document.getElementById('gUrl').value.trim();
   const label=document.getElementById('gLabel').value.trim()||'성적 확인하기';
   if(!url) return toast('사이트 주소를 입력하세요');
-  if(!/^https?:\/\//i.test(url)) url='https://'+url;   // http 없으면 보정
+  if(!/^https?:\/\//i.test(url)) url='https://'+url;
   await setDoc(docRef('links','grade'),{url,label},{merge:true});
   toast('링크를 저장했어요');
 };
@@ -645,14 +609,12 @@ function renderGrade(g){
   }
 }
 
-/* =========================================================
-   알림판 — D-day
-   ========================================================= */
+/* ===== 알림판 — D-day ===== */
 document.getElementById('dAdd').onclick=async()=>{
   if(!db||!classId) return toast('학급 먼저 설정하세요');
   const label=document.getElementById('dLabel').value.trim();
-  const date=document.getElementById('dDate').value;   // 시작일 YYYY-MM-DD
-  const end=document.getElementById('dEnd').value;      // 종료일(선택)
+  const date=document.getElementById('dDate').value;
+  const end=document.getElementById('dEnd').value;
   if(!label||!date) return toast('일정 이름과 시작일을 입력하세요');
   if(end && end<date) return toast('종료일이 시작일보다 빠를 수 없어요');
   await addDoc(col('events'),{label,date,end:end||'',createdAt:serverTimestamp()});
@@ -669,17 +631,16 @@ function daysUntil(dateStr){
 function fmtMD(dateStr){ const d=new Date(dateStr+'T00:00:00'); return `${d.getMonth()+1}/${d.getDate()}`; }
 function renderDday(items){
   const box=document.getElementById('ddayList');
-  // 지난 일정 자동 숨김 (종료일이 있으면 종료일, 없으면 시작일 기준 — 그날까지는 표시)
   const visible=items.filter(it=> daysUntil(it.end || it.date) >= 0 );
   if(!visible.length){ box.innerHTML='<div class="empty"><span class="big">📅</span>다가오는 일정이 없어요.</div>'; return; }
   visible.sort((a,b)=> a.date.localeCompare(b.date));
   box.innerHTML=visible.map(it=>{
-    const n=daysUntil(it.date);                 // 시작일까지 남은 일수
+    const n=daysUntil(it.date);
     const dateLabel = it.end ? `${fmtMD(it.date)}~${fmtMD(it.end)}` : fmtMD(it.date);
     let txt,cls;
-    if(n>0){ txt='D-'+n; cls=n<=7?'soon':''; }          // 시작 전
-    else if(n===0){ txt='D-DAY'; cls='today'; }          // 시작 당일
-    else { txt='진행 중'; cls='today'; }                  // 기간 중 (종료일 전까지)
+    if(n>0){ txt='D-'+n; cls=n<=7?'soon':''; }
+    else if(n===0){ txt='D-DAY'; cls='today'; }
+    else { txt='진행 중'; cls='today'; }
     return `<div class="dday">
       <div class="info"><div class="name">${esc(it.label)}</div><div class="date">${esc(dateLabel)}</div></div>
       <span class="count ${cls}">${txt}</span>
@@ -689,9 +650,7 @@ function renderDday(items){
   if(isTeacher) box.querySelectorAll('.del').forEach(b=>b.onclick=async()=>{ if(confirm('이 일정을 삭제할까요?')) await deleteDoc(docRef('events',b.dataset.id)); });
 }
 
-/* =========================================================
-   건의 · 상담 (실명)
-   ========================================================= */
+/* ===== 건의 ===== */
 document.getElementById('sCounsel').onchange=e=>{
   document.getElementById('slotWrap').style.display=e.target.checked?'block':'none';
 };
@@ -741,16 +700,15 @@ function renderSuggestions(items){
     else{ const cur=items.find(x=>x.id===id); await updateDoc(docRef('suggestions',id),{resolved:!cur.resolved}); }
   });
 }
-// 건의 → CSV 내보내기 (엑셀에서 열림)
 document.getElementById('sExport').onclick=()=>{
   if(!lastSuggestions.length) return toast('내보낼 건의가 없어요');
-  const q=(v)=>'"'+String(v??'').replace(/"/g,'""')+'"';   // CSV 셀 안전 처리
+  const q=(v)=>'"'+String(v??'').replace(/"/g,'""')+'"';
   const header=['날짜','이름','분류','상담신청','희망시간','확인여부','내용'];
   const rows=lastSuggestions.map(it=>[
     fmt(it.createdAt), it.anonymous?'':(it.name||''), it.category||'',
     it.counsel?'O':'', it.counsel?(it.slot||''):'', it.resolved?'확인됨':'', it.text||''
   ].map(q).join(','));
-  const csv='\uFEFF'+[header.map(q).join(','),...rows].join('\r\n');  // BOM: 엑셀 한글 깨짐 방지
+  const csv='\uFEFF'+[header.map(q).join(','),...rows].join('\r\n');
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
@@ -759,10 +717,7 @@ document.getElementById('sExport').onclick=()=>{
   toast('내보냈어요');
 };
 
-/* =========================================================
-   1인1역 (표 또는 이미지)
-   ========================================================= */
-// 붙여넣은 텍스트(탭 또는 콤마 구분, 첫 줄=제목)를 표로 변환
+/* ===== 1인1역 ===== */
 function textToTable(raw){
   const rows=String(raw||'').replace(/\r/g,'').split('\n').filter(l=>l.trim()!=='');
   if(!rows.length) return '';
@@ -792,7 +747,6 @@ async function saveDuty(textField,imgField,textId,imgId){
   toast('저장했어요');
 }
 document.getElementById('roleSave').onclick=()=>saveDuty('role','roleImg','roleInput','roleImgInput');
-
 const ROLE_EMPTY='<div class="empty"><span class="big">🙋</span>아직 등록 전이에요.</div>';
 function setIfNotFocused(id,val){ if(document.activeElement?.id!==id) document.getElementById(id).value=val||''; }
 function renderDuties(d){
@@ -802,9 +756,7 @@ function renderDuties(d){
   renderDutyView('roleTableView',ROLE_EMPTY,d.role,d.roleImg);
 }
 
-/* =========================================================
-   칭찬
-   ========================================================= */
+/* ===== 칭찬 ===== */
 document.getElementById('pSubmit').onclick=async()=>{
   if(!db||!classId) return toast('학급 먼저 설정하세요');
   const to=document.getElementById('pTo').value.trim();
@@ -828,14 +780,11 @@ function renderPraise(items){
   if(isTeacher) wall.querySelectorAll('button[data-id]').forEach(b=>b.onclick=async()=>{ if(confirm('삭제할까요?')) await deleteDoc(docRef('praises',b.dataset.id)); });
 }
 
-/* =========================================================
-   실시간 구독
-   ========================================================= */
+/* ===== 실시간 구독 ===== */
 let unsubs=[];
 function startListeners(){
   if(!db||!classId) return;
   unsubs.forEach(u=>u&&u()); unsubs=[];
-
   unsubs.push(onSnapshot(query(col('notices'),orderBy('createdAt','desc')),s=>{
     renderNotices(s.docs.map(d=>({id:d.id,...d.data()})));
   }));
@@ -844,27 +793,469 @@ function startListeners(){
   unsubs.push(onSnapshot(query(col('events'),orderBy('date','asc')),s=>{
     renderDday(s.docs.map(d=>({id:d.id,...d.data()})));
   }));
-
-  // 건의는 교사 로그인 상태에서만 구독 (보안 규칙상 미로그인 시 읽기 차단)
   if(isTeacher){
     unsubs.push(onSnapshot(query(col('suggestions'),orderBy('createdAt','desc')),s=>{
       renderSuggestions(s.docs.map(d=>({id:d.id,...d.data()})));
-    }, err=>{ /* 권한 없음 등은 조용히 무시 */ }));
+    }, err=>{ }));
   }
   unsubs.push(onSnapshot(docRef('duties','info'),s=> renderDuties(s.exists()?s.data():null) ));
   unsubs.push(onSnapshot(query(col('praises'),orderBy('createdAt','desc')),s=>{
     renderPraise(s.docs.map(d=>({id:d.id,...d.data()})));
   }));
+  unsubs.push(onSnapshot(query(col('reportActivities'),orderBy('order','asc')),s=>{
+    allActivities = s.docs.map(d=>({id:d.id,...d.data()}));
+    renderReportPanel();
+  }, err=>{ }));
 }
 
 /* =========================================================
-   Firebase 동적 로딩 (실패해도 UI는 작동)
+   보고서 (진로/자율 활동 → 차시별 제출 → AI 생기부 초안/채택)
    ========================================================= */
+function genId(){ return 's'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function subId(a,s,n){ return `${a}__${s}__${n}`; }
+function recordId(a,n){ return `${a}__${n}`; }
+
+function renderReportPanel(){
+  const root=document.getElementById('reportRoot');
+  if(!root) return;
+  root.innerHTML = isTeacher ? teacherReportHTML() : studentReportHTML();
+  bindReportEvents();
+}
+
+function studentReportHTML(){
+  if(!studentNo || !studentName){
+    return `<div class="card">
+      <h2>학번·이름 입력</h2>
+      <p class="sub">보고서 활동에 참여하려면 학번과 이름을 입력하세요.</p>
+      <label class="fld">학번</label>
+      <input type="text" id="rNo" placeholder="예: 10203" value="${esc(studentNo)}" />
+      <label class="fld">이름</label>
+      <input type="text" id="rName" placeholder="이름" value="${esc(studentName)}" />
+      <div style="height:12px"></div>
+      <button class="btn" id="rSaveInfo" style="background:var(--c-report)">입장</button>
+    </div>`;
+  }
+  if(!rNav.area){
+    return `<div class="card">
+      <h2>보고서</h2>
+      <p class="sub">${esc(studentName)} (${esc(studentNo)}) · <a href="#" id="rChangeInfo" style="color:var(--c-report)">정보 변경</a></p>
+      <div class="seg">
+        <button class="rAreaBtn" data-area="진로">진로</button>
+        <button class="rAreaBtn" data-area="자율">자율</button>
+      </div>
+    </div>`;
+  }
+  if(!rNav.activityId){
+    const list = allActivities.filter(a=>a.area===rNav.area);
+    return `<div class="card">
+      <h2>${esc(rNav.area)} 활동</h2>
+      <button class="btn small ghost" id="rBackArea">← 영역 다시 선택</button>
+      <div style="height:10px"></div>
+      ${list.length ? list.map(a=>`
+        <div class="item" data-act="openActivity" data-id="${a.id}" style="cursor:pointer">
+          <div style="font-weight:700">${esc(a.title)}</div>
+          <div class="meta">${(a.sessions||[]).length}개 차시</div>
+        </div>`).join('') : `<div class="empty"><span class="big">📂</span>아직 등록된 활동이 없어요.</div>`}
+    </div>`;
+  }
+  const act = allActivities.find(a=>a.id===rNav.activityId);
+  if(!act) return `<div class="empty">활동을 찾을 수 없어요.</div>`;
+  if(!rNav.sessionId){
+    const recordHtml = (curRecord && curRecord.status==='adopted') ? `
+      <div class="card" style="border-left:4px solid var(--c-report)">
+        <h2>생기부 (채택됨)</h2>
+        <div style="white-space:pre-wrap;word-break:break-word">${esc(curRecord.content)}</div>
+      </div>` : '';
+    const sessions = act.sessions||[];
+    return `${recordHtml}
+    <div class="card">
+      <h2>${esc(act.title)}</h2>
+      <button class="btn small ghost" id="rBackList">← 활동 목록</button>
+      <div style="height:10px"></div>
+      ${sessions.length ? sessions.map(s=>{
+        const sub=curSubs[s.id];
+        const badge = sub? `<span class="badge done">제출완료</span>` : `<span class="badge cat">미제출</span>`;
+        return `<div class="item" data-act="openSession" data-id="${s.id}" style="cursor:pointer">
+          <div style="font-weight:700">${esc(s.title)}</div>
+          <div class="meta">${badge}</div>
+        </div>`;
+      }).join('') : `<div class="empty">차시가 없어요.</div>`}
+    </div>`;
+  }
+  const session = (act.sessions||[]).find(s=>s.id===rNav.sessionId);
+  if(!session) return `<div class="empty">차시를 찾을 수 없어요.</div>`;
+  const sub = curSubs[session.id];
+  const answers = sub?.answers || [];
+  return `<div class="card">
+    <h2>${esc(act.title)} · ${esc(session.title)}</h2>
+    <button class="btn small ghost" id="rBackSessions">← 차시 목록</button>
+    <div style="height:10px"></div>
+    ${(session.questions||[]).map((q,i)=>`
+      <label class="fld">${i+1}. ${esc(q)}</label>
+      <textarea id="rAns${i}">${esc(answers[i]||'')}</textarea>
+    `).join('')}
+    <div style="height:12px"></div>
+    <button class="btn" id="rSubmitSession" style="background:var(--c-report)">${sub?'수정 저장':'제출'}</button>
+  </div>`;
+}
+
+function unsubCurActivity(){
+  if(curSubsUnsub){curSubsUnsub();curSubsUnsub=null;}
+  if(curRecordUnsub){curRecordUnsub();curRecordUnsub=null;}
+  curSubs={}; curRecord=null;
+}
+function subscribeCurActivity(){
+  unsubCurActivity();
+  if(!db||!classId||!rNav.activityId) return;
+  curSubsUnsub = onSnapshot(query(col('reportSubmissions'), where('activityId','==',rNav.activityId), where('studentNo','==',studentNo)), s=>{
+    curSubs={};
+    s.docs.forEach(d=>{ const data=d.data(); curSubs[data.sessionId]=data; });
+    renderReportPanel();
+  }, err=>{ });
+  curRecordUnsub = onSnapshot(docRef('reportRecords', recordId(rNav.activityId,studentNo)), s=>{
+    curRecord = s.exists() ? s.data() : null;
+    renderReportPanel();
+  }, err=>{ });
+}
+
+function teacherReportHTML(){
+  const tabsHtml = `<div class="card">
+    <h2>보고서 관리</h2>
+    <div class="seg">
+      <button class="tBtn ${tNav.tab==='manage'?'on':''}" data-tab="manage">활동 관리</button>
+      <button class="tBtn ${tNav.tab==='status'?'on':''}" data-tab="status">제출 현황</button>
+      <button class="tBtn ${tNav.tab==='record'?'on':''}" data-tab="record">생기부 생성</button>
+    </div>
+  </div>`;
+  let body='';
+  if(tNav.tab==='manage') body=teacherManageHTML();
+  else if(tNav.tab==='status') body=teacherStatusHTML();
+  else body=teacherRecordHTML();
+  return tabsHtml+body;
+}
+
+function teacherManageHTML(){
+  const areaSeg = `<div class="seg">
+    <button class="tAreaBtn ${tNav.area==='진로'?'on':''}" data-area="진로">진로</button>
+    <button class="tAreaBtn ${tNav.area==='자율'?'on':''}" data-area="자율">자율</button>
+  </div>`;
+  const list = allActivities.filter(a=>a.area===tNav.area);
+  const listHtml = list.length ? list.map(a=>`
+    <div class="item" data-act="selManageAct" data-id="${a.id}" style="cursor:pointer">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+        <span style="font-weight:700">${esc(a.title)}</span>
+        <button class="btn small danger" data-act="delActivity" data-id="${a.id}" style="width:auto">삭제</button>
+      </div>
+      <div class="meta">${(a.sessions||[]).length}개 차시</div>
+    </div>`).join('') : `<div class="empty">활동이 없어요.</div>`;
+
+  let editorHtml='';
+  const act = allActivities.find(a=>a.id===tNav.manageActivityId);
+  if(act){
+    editorHtml = `<div class="card">
+      <h2>${esc(act.title)} · 차시 관리</h2>
+      <button class="btn small" id="tAddSession" style="background:var(--c-report);width:auto">차시 추가</button>
+      <div style="height:10px"></div>
+      ${(act.sessions||[]).map(s=>`
+        <div class="item">
+          <input type="text" data-act="sessTitle" data-id="${s.id}" value="${esc(s.title)}" style="font-weight:700;margin-bottom:8px" />
+          <label class="fld">질문 (한 줄에 하나씩)</label>
+          <textarea data-act="sessQuestions" data-id="${s.id}" rows="4">${esc((s.questions||[]).join('\n'))}</textarea>
+          <div class="row" style="margin-top:8px">
+            <button class="btn small" data-act="saveSession" data-id="${s.id}" style="background:var(--c-report)">차시 저장</button>
+            <button class="btn small danger" data-act="delSession" data-id="${s.id}">차시 삭제</button>
+          </div>
+        </div>`).join('') || `<div class="empty">차시가 없어요.</div>`}
+    </div>`;
+  }
+
+  return `<div class="card">
+    <h2>활동 추가</h2>
+    ${areaSeg}
+    <div style="height:10px"></div>
+    <input type="text" id="tNewActTitle" placeholder="활동 이름 (예: 독서토론)" />
+    <div style="height:10px"></div>
+    <button class="btn small" id="tAddActivity" style="background:var(--c-report)">활동 추가</button>
+    <hr class="soft" />
+    ${listHtml}
+  </div>
+  ${editorHtml}`;
+}
+
+function teacherStatusHTML(){
+  const options = allActivities.map(a=>`<option value="${a.id}" ${tNav.activityId===a.id?'selected':''}>${esc(a.area)} · ${esc(a.title)}</option>`).join('');
+  let table='';
+  if(tNav.activityId){
+    const act=allActivities.find(a=>a.id===tNav.activityId);
+    const sessions=act?.sessions||[];
+    const byStudent={};
+    statusSubs.forEach(d=>{
+      byStudent[d.studentNo]=byStudent[d.studentNo]||{name:d.studentName, sessions:{}};
+      byStudent[d.studentNo].sessions[d.sessionId]=true;
+    });
+    const rows=Object.entries(byStudent).map(([no,info])=>`
+      <tr><td>${esc(no)}</td><td>${esc(info.name)}</td>${sessions.map(s=>`<td>${info.sessions[s.id]?'✓':''}</td>`).join('')}</tr>`).join('');
+    table = `<div class="dtable-wrap"><table class="dtable">
+      <thead><tr><th>학번</th><th>이름</th>${sessions.map(s=>`<th>${esc(s.title)}</th>`).join('')}</tr></thead>
+      <tbody>${rows || `<tr><td colspan="${2+sessions.length}">제출 없음</td></tr>`}</tbody>
+    </table></div>`;
+  }
+  return `<div class="card">
+    <h2>제출 현황</h2>
+    <select id="tStatusAct"><option value="">활동 선택</option>${options}</select>
+    <div style="height:12px"></div>
+    ${table}
+  </div>`;
+}
+
+function teacherRecordHTML(){
+  const keyCard = `<div class="card">
+    <h2>Gemini API 키</h2>
+    <p class="sub">생기부 AI 생성에 사용됩니다. 이 브라우저에만 저장돼요.</p>
+    <input type="password" id="tGeminiKey" placeholder="Gemini API 키" value="${esc(localStorage.getItem('geminiKey')||'')}" />
+    <div style="height:10px"></div>
+    <button class="btn small" id="tSaveKey" style="background:var(--c-report)">키 저장</button>
+  </div>`;
+
+  const options = allActivities.map(a=>`<option value="${a.id}" ${tNav.activityId===a.id?'selected':''}>${esc(a.area)} · ${esc(a.title)}</option>`).join('');
+  const students={};
+  statusSubs.forEach(d=>{ students[d.studentNo]=d.studentName; });
+  const studentOptions = Object.entries(students).map(([no,name])=>`<option value="${no}" ${tNav.selectedStudentNo===no?'selected':''}>${esc(no)} ${esc(name)}</option>`).join('');
+
+  let recordArea='';
+  if(tNav.activityId && tNav.selectedStudentNo){
+    recordArea = `<div style="height:12px"></div>
+      <button class="btn small" id="tGenRecord" style="background:var(--c-report)">${teacherRecord?'다시 생성':'AI로 생성'}</button>
+      ${teacherRecord?`
+        <div style="height:12px"></div>
+        <textarea id="tRecordText" rows="14">${esc(teacherRecord.content||'')}</textarea>
+        <div class="meta" style="margin:6px 0">${teacherRecord.status==='adopted'?'<span class="badge done">채택됨</span>':'<span class="badge cat">초안</span>'}</div>
+        <div class="row">
+          <button class="btn small" id="tSaveRecord" style="background:var(--c-report)">초안 저장</button>
+          <button class="btn small" id="tAdoptRecord" style="background:var(--c-praise)">채택</button>
+        </div>
+      `:''}`;
+  }
+
+  return `${keyCard}
+  <div class="card">
+    <h2>생기부 생성</h2>
+    <label class="fld">활동</label>
+    <select id="tRecordAct"><option value="">활동 선택</option>${options}</select>
+    ${tNav.activityId?`<label class="fld">학생</label><select id="tRecordStudent"><option value="">학생 선택</option>${studentOptions}</select>`:''}
+    ${recordArea}
+  </div>`;
+}
+
+function subscribeStatus(activityId){
+  if(statusUnsub){statusUnsub();statusUnsub=null;}
+  statusSubs=[];
+  if(!db||!classId||!activityId) return;
+  statusUnsub=onSnapshot(query(col('reportSubmissions'), where('activityId','==',activityId)), s=>{
+    statusSubs = s.docs.map(d=>d.data());
+    renderReportPanel();
+  }, err=>{ });
+}
+function subscribeTeacherRecord(activityId,no){
+  if(teacherRecordUnsub){teacherRecordUnsub();teacherRecordUnsub=null;}
+  teacherRecord=null;
+  if(!db||!classId||!activityId||!no) return;
+  teacherRecordUnsub=onSnapshot(docRef('reportRecords', recordId(activityId,no)), s=>{
+    teacherRecord = s.exists() ? s.data() : null;
+    renderReportPanel();
+  }, err=>{ });
+}
+
+const REPORT_SYSTEM_RULES = `다음 규칙을 반드시 지켜 학교생활기록부(생기부) 문장을 작성하라.
+
+[문체]
+모든 문장은 명사형으로 종결한다. 예: ~함, ~을 보임, ~을 드러냄, ~이 돋보임.
+평어체, 구어체, 감상문체를 쓰지 않는다. ~했다, ~같다, ~인 것 같다 등은 금지한다.
+과장과 미사여구, 추상적 칭찬을 남발하지 않는다. 관찰된 사실에 근거해 서술한다.
+
+[표현 전환]
+학생이 느꼈다, 생각했다, 다짐했다, 배웠다, 알게 됐다, 이해했다 와 같이 학생 입장에서 쓴 표현을 그대로 옮기지 않는다.
+교사가 관찰한 행위로 바꾸어 쓴다. 예시: ~을 느꼈다 → 기록함/작성함, ~을 생각했다 → 수집함/토론함/발표함, ~을 다짐했다 → 서술함/적용함/구체화함, ~을 배웠다/알게 됐다 → 주장함/제시함/도출함/탐구함, ~을 이해했다 → 탐색함/나눔/공유함.
+역량이 드러나는 부분은 역량이 충분함, 두각을 보임, 능력이 탁월함, 모습이 인상적임, 자질이 있음 등으로 마무리한다.
+
+[금지 사항]
+교외 수상이나 성적, 모의고사·학력평가 성적, 공인어학시험 점수를 쓰지 않는다.
+논문이나 도서의 지식재산권 침해 소지가 있는 내용, 부모나 친인척의 사회경제적 지위를 쓰지 않는다.
+장학생, 장학금, 자격증 명칭, 특정 대학명, 기관명, 상호명, 강사명을 쓰지 않는다.
+학교명, 재단명, 교지명, 학교 별칭을 쓰지 않는다.
+영어 브랜드명이나 서비스명은 한글 일반명사로 바꾸어 쓴다. 예: 구글/네이버 → 포털사이트, 유튜브 → 동영상 플랫폼, 챗지피티 → 대화형 인공지능, 인스타그램 → 소셜네트워크 서비스, 파이썬 → 프로그래밍 언어. 단 도서명, 저자명, CEO·IT·TV·UCC·SNS·PPT 같은 일반화된 약어, 영문 도로명은 그대로 쓸 수 있다.
+학생이 제시한 근거(활동지 답변, 동료평가서, 자기평가서, 수업산출물, 소감문, 독후감) 없이 내용을 지어내지 않는다.
+
+[표기]
+특수문자와 번호 매기기(1. 2. 등)를 쓰지 않는다. 문단을 나눌 때는 줄바꿈만 사용한다.
+물결표(~)와 따옴표 사용에 주의한다.
+
+[내용]
+학생이 활동지에 실제로 쓴 내용에서 드러난 역량만 서술한다. 하지 않은 탐구나 실험, 수치를 지어내지 않는다.
+답변을 그대로 베끼지 말고, 거기서 드러난 사고와 태도, 역량을 교사 시선으로 재서술한다.
+진로와의 연계성, 관점이나 태도의 변화, 자기주도성, 공동체 기여가 드러나면 우선적으로 반영한다.`;
+
+function buildReportPrompt(act, subs){
+  const sessions = act.sessions||[];
+  const bySession={}; subs.forEach(s=>{ bySession[s.sessionId]=s; });
+  const body = sessions.map(s=>{
+    const sub=bySession[s.id];
+    if(!sub) return '';
+    const qa=(s.questions||[]).map((q,i)=>`질문: ${q}\n답변: ${sub.answers?.[i]||''}`).join('\n');
+    return `[차시: ${s.title}]\n${qa}`;
+  }).filter(Boolean).join('\n\n');
+  return `${REPORT_SYSTEM_RULES}\n\n[영역] ${act.area}\n[활동명] ${act.title}\n\n[학생 활동 기록]\n${body}\n\n위 기록을 바탕으로 생기부 문장을 작성하라.`;
+}
+async function callGemini(prompt){
+  const key=localStorage.getItem('geminiKey');
+  if(!key){ toast('Gemini API 키를 먼저 입력하세요'); return null; }
+  try{
+    const url=`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${encodeURIComponent(key)}`;
+    const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:prompt}]}]})});
+    if(!res.ok){ toast('AI 호출에 실패했어요'); return null; }
+    const data=await res.json();
+    return (data?.candidates?.[0]?.content?.parts?.[0]?.text||'').trim();
+  }catch(e){ toast('AI 호출에 실패했어요'); return null; }
+}
+
+function bindReportEvents(){
+  const byId=id=>document.getElementById(id);
+
+  if(byId('rSaveInfo')) byId('rSaveInfo').onclick=()=>{
+    const no=byId('rNo').value.trim(), name=byId('rName').value.trim();
+    if(!no||!name) return toast('학번과 이름을 입력하세요');
+    studentNo=no; studentName=name;
+    localStorage.setItem('rptStudentNo',no); localStorage.setItem('rptStudentName',name);
+    renderReportPanel();
+  };
+  if(byId('rChangeInfo')) byId('rChangeInfo').onclick=(e)=>{
+    e.preventDefault();
+    studentNo=''; studentName='';
+    localStorage.removeItem('rptStudentNo'); localStorage.removeItem('rptStudentName');
+    rNav={area:null,activityId:null,sessionId:null}; unsubCurActivity();
+    renderReportPanel();
+  };
+  document.querySelectorAll('.rAreaBtn').forEach(b=>b.onclick=()=>{
+    rNav={area:b.dataset.area,activityId:null,sessionId:null}; renderReportPanel();
+  });
+  if(byId('rBackArea')) byId('rBackArea').onclick=()=>{ rNav.area=null; renderReportPanel(); };
+  if(byId('rBackList')) byId('rBackList').onclick=()=>{
+    rNav.activityId=null; rNav.sessionId=null; unsubCurActivity(); renderReportPanel();
+  };
+  if(byId('rBackSessions')) byId('rBackSessions').onclick=()=>{ rNav.sessionId=null; renderReportPanel(); };
+  document.querySelectorAll('[data-act="openActivity"]').forEach(el=>el.onclick=()=>{
+    rNav.activityId=el.dataset.id; rNav.sessionId=null; subscribeCurActivity(); renderReportPanel();
+  });
+  document.querySelectorAll('[data-act="openSession"]').forEach(el=>el.onclick=()=>{
+    rNav.sessionId=el.dataset.id; renderReportPanel();
+  });
+  if(byId('rSubmitSession')) byId('rSubmitSession').onclick=async()=>{
+    if(!db||!classId) return toast('학급 먼저 설정하세요');
+    const act=allActivities.find(a=>a.id===rNav.activityId);
+    const session=(act.sessions||[]).find(s=>s.id===rNav.sessionId);
+    const answers=(session.questions||[]).map((_,i)=>byId('rAns'+i).value.trim());
+    await setDoc(docRef('reportSubmissions', subId(rNav.activityId,rNav.sessionId,studentNo)),{
+      activityId:rNav.activityId, sessionId:rNav.sessionId, area:act.area,
+      studentNo, studentName, answers, updatedAt:serverTimestamp()
+    });
+    toast('제출했어요');
+  };
+
+  document.querySelectorAll('.tBtn').forEach(b=>b.onclick=()=>{ tNav.tab=b.dataset.tab; renderReportPanel(); });
+
+  document.querySelectorAll('.tAreaBtn').forEach(b=>b.onclick=()=>{
+    tNav.area=b.dataset.area; tNav.manageActivityId=null; renderReportPanel();
+  });
+  if(byId('tAddActivity')) byId('tAddActivity').onclick=async()=>{
+    if(!db||!classId) return toast('학급 먼저 설정하세요');
+    const title=byId('tNewActTitle').value.trim();
+    if(!title) return toast('활동 이름을 입력하세요');
+    await addDoc(col('reportActivities'),{area:tNav.area,title,sessions:[],order:Date.now(),createdAt:serverTimestamp()});
+    toast('활동을 추가했어요');
+  };
+  document.querySelectorAll('[data-act="selManageAct"]').forEach(el=>el.onclick=(e)=>{
+    if(e.target.closest('[data-act="delActivity"]')) return;
+    tNav.manageActivityId=el.dataset.id; renderReportPanel();
+  });
+  document.querySelectorAll('[data-act="delActivity"]').forEach(el=>el.onclick=async(e)=>{
+    e.stopPropagation();
+    if(!confirm('이 활동을 삭제할까요? 제출 데이터는 남아있습니다.')) return;
+    await deleteDoc(docRef('reportActivities',el.dataset.id));
+    if(tNav.manageActivityId===el.dataset.id) tNav.manageActivityId=null;
+  });
+  if(byId('tAddSession')) byId('tAddSession').onclick=async()=>{
+    const act=allActivities.find(a=>a.id===tNav.manageActivityId);
+    const sessions=[...(act.sessions||[]), {id:genId(),title:'새 차시',questions:[]}];
+    await updateDoc(docRef('reportActivities',act.id),{sessions});
+  };
+  document.querySelectorAll('[data-act="saveSession"]').forEach(el=>el.onclick=async()=>{
+    const act=allActivities.find(a=>a.id===tNav.manageActivityId);
+    const sid=el.dataset.id;
+    const titleInput=document.querySelector(`input[data-act="sessTitle"][data-id="${sid}"]`);
+    const qInput=document.querySelector(`textarea[data-act="sessQuestions"][data-id="${sid}"]`);
+    const questions=qInput.value.split('\n').map(s=>s.trim()).filter(Boolean);
+    const sessions=(act.sessions||[]).map(s=> s.id===sid ? {...s, title:titleInput.value.trim()||s.title, questions} : s);
+    await updateDoc(docRef('reportActivities',act.id),{sessions});
+    toast('차시를 저장했어요');
+  });
+  document.querySelectorAll('[data-act="delSession"]').forEach(el=>el.onclick=async()=>{
+    if(!confirm('차시를 삭제할까요?')) return;
+    const act=allActivities.find(a=>a.id===tNav.manageActivityId);
+    const sessions=(act.sessions||[]).filter(s=>s.id!==el.dataset.id);
+    await updateDoc(docRef('reportActivities',act.id),{sessions});
+  });
+
+  if(byId('tStatusAct')) byId('tStatusAct').onchange=(e)=>{
+    tNav.activityId=e.target.value||null; subscribeStatus(tNav.activityId); renderReportPanel();
+  };
+
+  if(byId('tRecordAct')) byId('tRecordAct').onchange=(e)=>{
+    tNav.activityId=e.target.value||null; tNav.selectedStudentNo='';
+    teacherRecord=null; subscribeStatus(tNav.activityId); renderReportPanel();
+  };
+  if(byId('tRecordStudent')) byId('tRecordStudent').onchange=(e)=>{
+    tNav.selectedStudentNo=e.target.value||'';
+    subscribeTeacherRecord(tNav.activityId, tNav.selectedStudentNo);
+    renderReportPanel();
+  };
+  if(byId('tSaveKey')) byId('tSaveKey').onclick=()=>{
+    localStorage.setItem('geminiKey', byId('tGeminiKey').value.trim());
+    toast('키를 저장했어요');
+  };
+  if(byId('tGenRecord')) byId('tGenRecord').onclick=async()=>{
+    if(teacherRecord && !confirm('이미 생성된 내용이 있어요. 다시 생성하면 덮어씁니다. 계속할까요?')) return;
+    const act=allActivities.find(a=>a.id===tNav.activityId);
+    const subsForStudent=statusSubs.filter(s=>s.studentNo===tNav.selectedStudentNo);
+    if(!subsForStudent.length) return toast('해당 학생의 제출 내역이 없어요');
+    const prompt=buildReportPrompt(act, subsForStudent);
+    toast('AI 생성 중...');
+    const text=await callGemini(prompt);
+    if(!text) return;
+    await setDoc(docRef('reportRecords', recordId(tNav.activityId,tNav.selectedStudentNo)),{
+      activityId:tNav.activityId, studentNo:tNav.selectedStudentNo,
+      studentName: subsForStudent[0]?.studentName||'',
+      content:text, status:'draft', createdAt:serverTimestamp()
+    });
+    toast('초안을 생성했어요');
+  };
+  if(byId('tSaveRecord')) byId('tSaveRecord').onclick=async()=>{
+    await updateDoc(docRef('reportRecords', recordId(tNav.activityId,tNav.selectedStudentNo)),{content:byId('tRecordText').value});
+    toast('저장했어요');
+  };
+  if(byId('tAdoptRecord')) byId('tAdoptRecord').onclick=async()=>{
+    await updateDoc(docRef('reportRecords', recordId(tNav.activityId,tNav.selectedStudentNo)),{
+      content:byId('tRecordText').value, status:'adopted', adoptedAt:serverTimestamp()
+    });
+    toast('채택했어요');
+  };
+}
+
+/* ===== Firebase 동적 로딩 ===== */
 async function loadFirebase(){
   const banner=document.getElementById('cfgBanner');
   if(!firebaseConfig.projectId){
     banner.style.display='block';
-    banner.innerHTML='<b>Firebase 설정이 필요합니다.</b> 파일 아래쪽 <code>firebaseConfig</code>에 본인 프로젝트 설정을 붙여넣으면 저장·동기화가 작동합니다. (탭·입력 화면은 지금도 둘러볼 수 있어요.)';
+    banner.innerHTML='<b>Firebase 설정이 필요합니다.</b> 파일 아래쪽 <code>firebaseConfig</code>에 본인 프로젝트 설정을 붙여넣으면 저장·동기화가 작동합니다.';
     return;
   }
   try{
@@ -872,13 +1263,12 @@ async function loadFirebase(){
     const fs     = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
     const au     = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js");
     ({ initializeApp } = appMod);
-    ({ getFirestore, collection, addDoc, onSnapshot, query, orderBy,
+    ({ getFirestore, collection, addDoc, onSnapshot, query, orderBy, where,
        doc, setDoc, getDoc, updateDoc, serverTimestamp, deleteDoc, increment } = fs);
     ({ getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } = au);
     const app = initializeApp(firebaseConfig);
     db = getFirestore(app);
     auth = getAuth(app);
-    // 로그인 상태가 바뀌면 교사 모드 on/off + 리스너 재구독(건의 열람 권한 반영)
     onAuthStateChanged(auth,(user)=>{
       isTeacher = !!user;
       applyMode();
@@ -890,15 +1280,13 @@ async function loadFirebase(){
     banner.innerHTML='<b>미리보기 모드</b> — 이 환경에서는 Firebase를 불러올 수 없어 저장·동기화가 꺼져 있습니다. GitHub Pages 등 실제 인터넷 환경에 올리면 정상 작동합니다.';
   }
 }
-/* =========================================================
-   엔터키로 버튼 실행 (입력칸 → 해당 버튼 클릭)
-   ========================================================= */
+
 function enterToClick(inputIds, btnId){
   inputIds.forEach(id=>{
     const el=document.getElementById(id);
     if(!el) return;
     el.addEventListener('keydown',e=>{
-      if(e.key==='Enter' && !e.isComposing){   // 한글 조합 중 엔터는 무시
+      if(e.key==='Enter' && !e.isComposing){
         e.preventDefault();
         document.getElementById(btnId).click();
       }
@@ -913,5 +1301,6 @@ enterToClick(['aBank','aHolder','aNumber','aMemo'],'aSave');
 
 loadFirebase();
 </script>
+
 </body>
 </html>

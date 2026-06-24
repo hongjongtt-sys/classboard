@@ -426,7 +426,7 @@
 <script type="module">
 let initializeApp, getFirestore, collection, addDoc, onSnapshot, query, orderBy, where,
     doc, setDoc, getDoc, updateDoc, serverTimestamp, deleteDoc, increment;
-let getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged;
+let getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged;
 
 const firebaseConfig = {
   apiKey: "AIzaSyDEVJk1GOGjJdBfCJjuMyeXmzzKIw4wlKI",
@@ -436,6 +436,9 @@ const firebaseConfig = {
   messagingSenderId: "933415283397",
   appId: "1:933415283397:web:87f93865e49a9e8d049eac"
 };
+
+/* 이 이메일로 로그인한 사람만 '교사'로 인식 (학생은 학번@classboard.local 형태) */
+const TEACHER_EMAIL = "hongjongtt@class.com";
 
 const toast = (m)=>{const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1900);};
 
@@ -456,6 +459,7 @@ let statusUnsub = null;
 let teacherRecord = null;
 let teacherRecordUnsub = null;
 let importData = null;       // 엑셀 일괄 가져오기: 분석된 데이터
+let studentAuthMode = 'login';  // 학생 화면: 'login' | 'signup'
 
 /* ---------- 학급 코드 ---------- */
 const params=new URLSearchParams(location.search);
@@ -824,6 +828,39 @@ function startListeners(){
    ========================================================= */
 function genId(){ return 's'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
 
+/* ---------- 학생 인증 (학번 = 가짜 이메일) ---------- */
+async function studentLogin(no, pw){
+  if(!auth) return toast('연결 중이에요. 잠시 후 다시 시도하세요');
+  if(!classId) return toast('학급 코드를 먼저 입력하세요');
+  if(!no || !pw) return toast('학번과 비밀번호를 입력하세요');
+  try{
+    await signInWithEmailAndPassword(auth, `${no}@classboard.local`, pw);
+  }catch(e){
+    toast('로그인 실패 — 학번/비밀번호 확인 (처음이면 가입)');
+  }
+}
+async function studentSignup(no, name, pw){
+  if(!auth) return toast('연결 중이에요. 잠시 후 다시 시도하세요');
+  if(!classId) return toast('학급 코드를 먼저 입력하세요');
+  if(!no || !name || !pw) return toast('학번·이름·비밀번호를 모두 입력하세요');
+  if(pw.length < 6) return toast('비밀번호는 6자 이상이어야 해요');
+  try{
+    await createUserWithEmailAndPassword(auth, `${no}@classboard.local`, pw);
+    studentName = name;
+    if(auth.currentUser){
+      try{ await setDoc(docRef('reportStudents', auth.currentUser.uid), {studentNo:no, name, updatedAt:serverTimestamp()}, {merge:true}); }catch(e){}
+    }
+  }catch(e){
+    if(e && e.code==='auth/email-already-in-use') toast('이미 가입된 학번이에요. 로그인하세요');
+    else if(e && e.code==='auth/weak-password') toast('비밀번호는 6자 이상이어야 해요');
+    else toast('가입 실패 — 다시 시도하세요');
+  }
+}
+function studentLogout(){
+  if(auth && auth.currentUser) signOut(auth);
+}
+
+
 /* ---------- 엑셀 일괄 가져오기 ---------- */
 async function parseImportFile(file, cfg){
   let XLSX;
@@ -893,23 +930,42 @@ function renderReportPanel(){
   bindReportEvents();
 }
 
+function studentUser(){
+  return (auth && auth.currentUser && auth.currentUser.email !== TEACHER_EMAIL) ? auth.currentUser : null;
+}
 function studentReportHTML(){
-  if(!studentNo || !studentName){
+  if(!studentUser()){
+    if(studentAuthMode==='signup'){
+      return `<div class="card">
+        <h2>처음 참여 (가입)</h2>
+        <p class="sub">학번·이름·비밀번호를 정하세요. 다음부터는 학번과 비밀번호로 로그인합니다.</p>
+        <label class="fld">학번</label>
+        <input type="text" id="rNo" placeholder="예: 20301" />
+        <label class="fld">이름</label>
+        <input type="text" id="rName" placeholder="이름" />
+        <label class="fld">비밀번호 (6자 이상)</label>
+        <input type="password" id="rPw" placeholder="비밀번호" />
+        <div style="height:12px"></div>
+        <button class="btn" id="rSignup" style="background:var(--c-report)">가입하고 입장</button>
+        <p class="hint" style="margin-top:10px">이미 가입했나요? <a href="#" id="rToLogin" style="color:var(--c-report)">로그인하기</a></p>
+      </div>`;
+    }
     return `<div class="card">
-      <h2>학번·이름 입력</h2>
-      <p class="sub">보고서 활동에 참여하려면 학번과 이름을 입력하세요.</p>
+      <h2>학생 로그인</h2>
+      <p class="sub">본인이 정한 학번과 비밀번호로 로그인하세요. 자기 답만 보이고 수정할 수 있어요.</p>
       <label class="fld">학번</label>
-      <input type="text" id="rNo" placeholder="예: 10203" value="${esc(studentNo)}" />
-      <label class="fld">이름</label>
-      <input type="text" id="rName" placeholder="이름" value="${esc(studentName)}" />
+      <input type="text" id="rNo" placeholder="예: 20301" />
+      <label class="fld">비밀번호</label>
+      <input type="password" id="rPw" placeholder="비밀번호" />
       <div style="height:12px"></div>
-      <button class="btn" id="rSaveInfo" style="background:var(--c-report)">입장</button>
+      <button class="btn" id="rLogin" style="background:var(--c-report)">로그인</button>
+      <p class="hint" style="margin-top:10px">처음이신가요? <a href="#" id="rToSignup" style="color:var(--c-report)">비밀번호 정하고 가입</a></p>
     </div>`;
   }
   if(!rNav.area){
     return `<div class="card">
       <h2>보고서</h2>
-      <p class="sub">${esc(studentName)} (${esc(studentNo)}) · <a href="#" id="rChangeInfo" style="color:var(--c-report)">정보 변경</a></p>
+      <p class="sub">${esc(studentName||studentNo)} (${esc(studentNo)}) · <a href="#" id="rLogout" style="color:var(--c-report)">로그아웃</a></p>
       <div class="seg">
         <button class="rAreaBtn" data-area="진로">진로</button>
         <button class="rAreaBtn" data-area="자율">자율</button>
@@ -1241,19 +1297,15 @@ async function callGemini(prompt){
 function bindReportEvents(){
   const byId=id=>document.getElementById(id);
 
-  if(byId('rSaveInfo')) byId('rSaveInfo').onclick=()=>{
-    const no=byId('rNo').value.trim(), name=byId('rName').value.trim();
-    if(!no||!name) return toast('학번과 이름을 입력하세요');
-    studentNo=no; studentName=name;
-    localStorage.setItem('rptStudentNo',no); localStorage.setItem('rptStudentName',name);
-    renderReportPanel();
-  };
-  if(byId('rChangeInfo')) byId('rChangeInfo').onclick=(e)=>{
+  if(byId('rLogin')) byId('rLogin').onclick=()=> studentLogin(byId('rNo').value.trim(), byId('rPw').value);
+  if(byId('rSignup')) byId('rSignup').onclick=()=> studentSignup(byId('rNo').value.trim(), byId('rName').value.trim(), byId('rPw').value);
+  if(byId('rToSignup')) byId('rToSignup').onclick=(e)=>{ e.preventDefault(); studentAuthMode='signup'; renderReportPanel(); };
+  if(byId('rToLogin')) byId('rToLogin').onclick=(e)=>{ e.preventDefault(); studentAuthMode='login'; renderReportPanel(); };
+  if(byId('rPw')) byId('rPw').addEventListener('keydown',e=>{ if(e.key==='Enter' && !e.isComposing){ e.preventDefault(); (byId('rLogin')||byId('rSignup'))?.click(); } });
+  if(byId('rLogout')) byId('rLogout').onclick=(e)=>{
     e.preventDefault();
-    studentNo=''; studentName='';
-    localStorage.removeItem('rptStudentNo'); localStorage.removeItem('rptStudentName');
     rNav={area:null,activityId:null,sessionId:null}; unsubCurActivity();
-    renderReportPanel();
+    studentLogout();
   };
   document.querySelectorAll('.rAreaBtn').forEach(b=>b.onclick=()=>{
     rNav={area:b.dataset.area,activityId:null,sessionId:null}; renderReportPanel();
@@ -1408,12 +1460,28 @@ async function loadFirebase(){
     ({ initializeApp } = appMod);
     ({ getFirestore, collection, addDoc, onSnapshot, query, orderBy, where,
        doc, setDoc, getDoc, updateDoc, serverTimestamp, deleteDoc, increment } = fs);
-    ({ getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } = au);
+    ({ getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } = au);
     const app = initializeApp(firebaseConfig);
     db = getFirestore(app);
     auth = getAuth(app);
-    onAuthStateChanged(auth,(user)=>{
-      isTeacher = !!user;
+    onAuthStateChanged(auth, async (user)=>{
+      isTeacher = !!user && user.email === TEACHER_EMAIL;
+      if(user && !isTeacher){
+        // 학생 로그인: 이메일 앞부분이 학번
+        studentNo = (user.email||'').split('@')[0];
+        if(classId){
+          try{
+            const snap = await getDoc(docRef('reportStudents', user.uid));
+            if(snap.exists() && snap.data().name) studentName = snap.data().name;
+            // 규칙(본인 확인)용 프로필 문서 보장
+            await setDoc(docRef('reportStudents', user.uid), {studentNo, name:studentName||'', updatedAt:serverTimestamp()}, {merge:true});
+          }catch(e){}
+        }
+      } else if(!user){
+        studentNo=''; studentName='';
+        rNav={area:null,activityId:null,sessionId:null};
+        unsubCurActivity();
+      }
       applyMode();
       if(classId) startListeners();
     });

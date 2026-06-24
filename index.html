@@ -1264,11 +1264,12 @@ function teacherRecordHTML(){
       ${teacherRecord?`
         <div style="height:12px"></div>
         <textarea id="tRecordText" rows="14">${esc(teacherRecord.content||'')}</textarea>
-        <div class="meta" style="margin:6px 0">${teacherRecord.status==='adopted'?'<span class="badge done">채택됨</span>':'<span class="badge cat">초안</span>'} <span id="tByteCount">${byteLen(teacherRecord.content||'')}바이트 / 700</span></div>
+        <div class="meta" style="margin:6px 0">${teacherRecord.status==='adopted'?'<span class="badge done">채택됨 · 학생에게 보임</span>':'<span class="badge cat">초안 · 학생 안 보임</span>'} <span id="tByteCount">${byteLen(teacherRecord.content||'')}바이트 / 700</span></div>
         <div class="row">
           <button class="btn small" id="tSaveRecord" style="background:var(--c-report)">초안 저장</button>
-          <button class="btn small" id="tAdoptRecord" style="background:var(--c-praise)">채택</button>
+          <button class="btn small" id="tAdoptRecord" style="background:var(--c-praise)">${teacherRecord.status==='adopted'?'수정 채택(갱신)':'채택'}</button>
         </div>
+        ${teacherRecord.status==='adopted'?`<div style="height:8px"></div><button class="btn small danger" id="tUnadoptRecord">채택 취소(학생에게 숨기기)</button>`:''}
       `:''}`;
   }
 
@@ -1557,7 +1558,14 @@ function bindReportEvents(){
     await updateDoc(docRef('reportRecords', recordId(tNav.activityId,tNav.selectedStudentNo)),{
       content:byId('tRecordText').value, status:'adopted', adoptedAt:serverTimestamp()
     });
-    toast('채택했어요');
+    toast('채택했어요 · 학생에게 보여요');
+  };
+  if(byId('tUnadoptRecord')) byId('tUnadoptRecord').onclick=async()=>{
+    if(!confirm('채택을 취소하면 학생 화면에서 숨겨져요. 계속할까요?')) return;
+    await updateDoc(docRef('reportRecords', recordId(tNav.activityId,tNav.selectedStudentNo)),{
+      content:byId('tRecordText').value, status:'draft'
+    });
+    toast('채택을 취소했어요 · 학생 안 보임');
   };
 }
 

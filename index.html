@@ -1082,7 +1082,7 @@ function teacherManageHTML(){
 
 function teacherStatusHTML(){
   const options = allActivities.map(a=>`<option value="${a.id}" ${tNav.activityId===a.id?'selected':''}>${esc(a.area)} · ${esc(a.title)}</option>`).join('');
-  let table='';
+  let table='', detail='';
   if(tNav.activityId){
     const act=allActivities.find(a=>a.id===tNav.activityId);
     const sessions=act?.sessions||[];
@@ -1092,18 +1092,40 @@ function teacherStatusHTML(){
       byStudent[d.studentNo].sessions[d.sessionId]=true;
     });
     const rows=Object.entries(byStudent).map(([no,info])=>`
-      <tr><td>${esc(no)}</td><td>${esc(info.name)}</td>${sessions.map(s=>`<td>${info.sessions[s.id]?'✓':''}</td>`).join('')}</tr>`).join('');
+      <tr data-act="statusStudent" data-no="${esc(no)}" style="cursor:pointer;${tNav.statusStudentNo===no?'background:#eef0ff':''}"><td>${esc(no)}</td><td>${esc(info.name)}</td>${sessions.map(s=>`<td>${info.sessions[s.id]?'✓':''}</td>`).join('')}</tr>`).join('');
     table = `<div class="dtable-wrap"><table class="dtable">
       <thead><tr><th>학번</th><th>이름</th>${sessions.map(s=>`<th>${esc(s.title)}</th>`).join('')}</tr></thead>
       <tbody>${rows || `<tr><td colspan="${2+sessions.length}">제출 없음</td></tr>`}</tbody>
-    </table></div>`;
+    </table></div>
+    <p class="hint">학생 줄을 누르면 제출한 답변 전체를 볼 수 있어요.</p>`;
+
+    if(tNav.statusStudentNo){
+      const subs=statusSubs.filter(d=>d.studentNo===tNav.statusStudentNo);
+      const bySession={}; subs.forEach(d=>{ bySession[d.sessionId]=d; });
+      const nm=subs[0]?.studentName||'';
+      detail=`<div class="card" style="border-left:4px solid var(--c-report)">
+        <h2>${esc(tNav.statusStudentNo)} ${esc(nm)} · 제출 내용</h2>
+        ${sessions.map(s=>{
+          const sub=bySession[s.id];
+          if(!sub) return `<div class="item"><div style="font-weight:700">${esc(s.title)}</div><div class="meta">미제출</div></div>`;
+          return `<div class="item">
+            <div style="font-weight:700;margin-bottom:6px">${esc(s.title)}</div>
+            ${(s.questions||[]).map((q,i)=>`<div style="margin:10px 0">
+              <div style="font-size:13px;color:var(--ink-soft);font-weight:700">${i+1}. ${esc(q)}</div>
+              <div style="white-space:pre-wrap;word-break:break-word;margin-top:3px">${esc(sub.answers?.[i]||'')||'<span style="color:var(--muted)">(빈 답변)</span>'}</div>
+            </div>`).join('')}
+          </div>`;
+        }).join('')}
+      </div>`;
+    }
   }
   return `<div class="card">
     <h2>제출 현황</h2>
     <select id="tStatusAct"><option value="">활동 선택</option>${options}</select>
     <div style="height:12px"></div>
     ${table}
-  </div>`;
+  </div>
+  ${detail}`;
 }
 
 function teacherRecordHTML(){
@@ -1323,8 +1345,12 @@ function bindReportEvents(){
   });
 
   if(byId('tStatusAct')) byId('tStatusAct').onchange=(e)=>{
-    tNav.activityId=e.target.value||null; subscribeStatus(tNav.activityId); renderReportPanel();
+    tNav.activityId=e.target.value||null; tNav.statusStudentNo=''; subscribeStatus(tNav.activityId); renderReportPanel();
   };
+  document.querySelectorAll('[data-act="statusStudent"]').forEach(el=>el.onclick=()=>{
+    tNav.statusStudentNo = (tNav.statusStudentNo===el.dataset.no) ? '' : el.dataset.no;
+    renderReportPanel();
+  });
 
   if(byId('tRecordAct')) byId('tRecordAct').onchange=(e)=>{
     tNav.activityId=e.target.value||null; tNav.selectedStudentNo='';

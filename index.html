@@ -455,6 +455,7 @@ let statusSubs = [];
 let statusUnsub = null;
 let teacherRecord = null;
 let teacherRecordUnsub = null;
+let importData = null;       // 엑셀 일괄 가져오기: 분석된 데이터
 
 /* ---------- 학급 코드 ---------- */
 const params=new URLSearchParams(location.search);
@@ -822,6 +823,66 @@ function startListeners(){
    보고서 (진로/자율 활동 → 차시별 제출 → AI 생기부 초안/채택)
    ========================================================= */
 function genId(){ return 's'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+
+/* ---------- 엑셀 일괄 가져오기 ---------- */
+async function parseImportFile(file, cfg){
+  let XLSX;
+  try{
+    XLSX = await import('https://cdn.sheetjs.com/xlsx-0.20.3/package/xlsx.mjs');
+  }catch(e){ toast('엑셀 라이브러리를 불러오지 못했어요 (인터넷 확인)'); return; }
+  let rows;
+  try{
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, {type:'array'});
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+  }catch(e){ toast('파일을 읽지 못했어요'); return; }
+  if(!rows || rows.length<2){ toast('데이터가 없어요'); return; }
+  const headers = rows[0].map(h=>String(h).trim());
+  const find=(kw)=> headers.findIndex(h=>h.includes(kw));
+  const noIdx=find('학번'), nameIdx=find('이름');
+  if(noIdx<0 || nameIdx<0){ toast('학번/이름 열을 찾지 못했어요'); return; }
+  const tsIdx=headers.findIndex(h=>h.includes('타임')||/timestamp/i.test(h));
+  const qIdxs=headers.map((_,i)=>i).filter(i=> i!==noIdx && i!==nameIdx && i!==tsIdx);
+  const questions=qIdxs.map(i=>headers[i]);
+  const students=[];
+  for(const r of rows.slice(1)){
+    const no=String(r[noIdx]??'').trim();
+    if(!no) continue;
+    students.push({ studentNo:no, studentName:String(r[nameIdx]??'').trim(), answers:qIdxs.map(i=>String(r[i]??'').trim()) });
+  }
+  if(!students.length){ toast('유효한 학생 응답이 없어요'); return; }
+  importData={ ...cfg, area:tNav.area, questions, students };
+  renderReportPanel();
+  toast(`${students.length}명, 질문 ${questions.length}개 인식됨`);
+}
+async function runImport(){
+  if(!importData) return;
+  if(!db||!classId) return toast('학급 먼저 설정하세요');
+  const {target, newTitle, sessionTitle, area, questions, students}=importData;
+  const sessId=genId();
+  const session={ id:sessId, title:sessionTitle||'1차시', questions };
+  let activityId;
+  if(target==='__new__'){
+    if(!newTitle) return toast('새 활동 이름을 입력하세요');
+    const ref=await addDoc(col('reportActivities'),{ area, title:newTitle, sessions:[session], order:Date.now(), createdAt:serverTimestamp() });
+    activityId=ref.id;
+  }else{
+    const act=allActivities.find(a=>a.id===target);
+    if(!act) return toast('대상 활동을 찾을 수 없어요');
+    activityId=target;
+    await updateDoc(docRef('reportActivities',activityId),{ sessions:[...(act.sessions||[]), session] });
+  }
+  toast('가져오는 중...');
+  await Promise.all(students.map(st=> setDoc(docRef('reportSubmissions', subId(activityId, sessId, st.studentNo)),{
+    activityId, sessionId:sessId, area, studentNo:st.studentNo, studentName:st.studentName, answers:st.answers, updatedAt:serverTimestamp()
+  })));
+  const n=students.length;
+  importData=null;
+  renderReportPanel();
+  toast(`${n}명 가져오기 완료 ✓`);
+}
+
 function subId(a,s,n){ return `${a}__${s}__${n}`; }
 function recordId(a,n){ return `${a}__${n}`; }
 
@@ -979,6 +1040,32 @@ function teacherManageHTML(){
     </div>`;
   }
 
+  const importCard = importData ? `<div class="card">
+    <h2>가져오기 확인</h2>
+    <div class="item">
+      <div style="font-weight:700">${importData.target==='__new__'? esc(importData.newTitle||'(새 활동)')+' (새 활동)' : '「'+esc((allActivities.find(a=>a.id===importData.target)||{}).title||'')+'」에 차시 추가'}</div>
+      <div class="meta">영역 ${esc(importData.area)} · 차시 "${esc(importData.sessionTitle||'1차시')}" · 질문 ${importData.questions.length}개 · 학생 ${importData.students.length}명</div>
+    </div>
+    <div class="row">
+      <button class="btn small" id="tImpRun" style="background:var(--c-report)">가져오기 실행</button>
+      <button class="btn small ghost" id="tImpCancel">취소</button>
+    </div>
+  </div>` : `<div class="card">
+    <h2>엑셀(구글폼 응답) 가져오기</h2>
+    <p class="sub">구글폼 응답을 엑셀(.xlsx)로 내려받아 올리면 학번·이름·답변이 한 번에 등록돼요. 첫 행은 질문 제목이어야 합니다.</p>
+    <label class="fld">대상</label>
+    <select id="tImpTarget">
+      <option value="__new__">+ 새 활동 만들기 (${esc(tNav.area)})</option>
+      ${list.map(a=>`<option value="${a.id}">「${esc(a.title)}」에 차시 추가</option>`).join('')}
+    </select>
+    <div id="tImpNewWrap"><label class="fld">새 활동 이름</label><input type="text" id="tImpNewTitle" placeholder="예: 진로 현안 분석 리포트" /></div>
+    <label class="fld">차시 제목</label>
+    <input type="text" id="tImpSession" placeholder="예: 1차시" value="1차시" />
+    <label class="fld">엑셀 파일 (.xlsx)</label>
+    <input type="file" id="tImpFile" accept=".xlsx,.xls,.csv" />
+    <p class="hint">파일을 고르면 자동으로 분석합니다. 학번·이름 열은 제목으로 자동 인식돼요.</p>
+  </div>`;
+
   return `<div class="card">
     <h2>활동 추가</h2>
     ${areaSeg}
@@ -989,6 +1076,7 @@ function teacherManageHTML(){
     <hr class="soft" />
     ${listHtml}
   </div>
+  ${importCard}
   ${editorHtml}`;
 }
 
@@ -1183,6 +1271,25 @@ function bindReportEvents(){
     await addDoc(col('reportActivities'),{area:tNav.area,title,sessions:[],order:Date.now(),createdAt:serverTimestamp()});
     toast('활동을 추가했어요');
   };
+
+  // 엑셀 일괄 가져오기
+  if(byId('tImpTarget')) byId('tImpTarget').onchange=()=>{
+    const w=byId('tImpNewWrap');
+    if(w) w.style.display = byId('tImpTarget').value==='__new__' ? 'block' : 'none';
+  };
+  if(byId('tImpFile')) byId('tImpFile').onchange=(e)=>{
+    const file=e.target.files[0];
+    if(!file) return;
+    const cfg={
+      target: byId('tImpTarget')?byId('tImpTarget').value:'__new__',
+      newTitle:(byId('tImpNewTitle')?.value||'').trim(),
+      sessionTitle:(byId('tImpSession')?.value||'').trim()||'1차시'
+    };
+    toast('파일 분석 중...');
+    parseImportFile(file, cfg);
+  };
+  if(byId('tImpRun')) byId('tImpRun').onclick=runImport;
+  if(byId('tImpCancel')) byId('tImpCancel').onclick=()=>{ importData=null; renderReportPanel(); };
   document.querySelectorAll('[data-act="selManageAct"]').forEach(el=>el.onclick=(e)=>{
     if(e.target.closest('[data-act="delActivity"]')) return;
     tNav.manageActivityId=el.dataset.id; renderReportPanel();

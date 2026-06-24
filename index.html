@@ -154,6 +154,7 @@
   .modal{position:relative;background:var(--paper-card);border-radius:18px;padding:24px;max-width:380px;width:100%;box-shadow:0 24px 60px -12px rgba(31,42,68,.4);border:1px solid var(--line);animation:pop .22s var(--ease)}
   .modal-x{position:absolute;top:12px;right:12px;width:32px;height:32px;border:none;background:transparent;color:var(--muted);font-size:22px;line-height:1;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s var(--ease)}
   .modal-x:hover{background:var(--line);color:var(--ink)}
+  .modal.wide{max-width:680px;max-height:85vh;overflow-y:auto}
   @keyframes pop{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
   .modal h3{margin:0 0 6px;font-size:17px;letter-spacing:-.02em}
   .modal p{margin:0 0 14px;font-size:13.5px;color:var(--muted);line-height:1.55}
@@ -421,6 +422,13 @@
   </div>
 </div>
 
+<div class="modal-bg" id="stuDetailModal">
+  <div class="modal wide">
+    <button class="modal-x" id="stuDetailClose" aria-label="닫기">×</button>
+    <div id="stuDetailBody"></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script type="module">
@@ -525,10 +533,17 @@ document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
 });
 
 document.querySelectorAll('.modal-bg').forEach(m=>m.onclick=e=>{if(e.target===m)m.classList.remove('show')});
+// 학생 상세 팝업: 닫을 때 선택 상태도 비움(재오픈 방지)
+(function(){
+  const dm=document.getElementById('stuDetailModal');
+  if(dm) dm.onclick=e=>{ if(e.target===dm) closeStudentDetail(); };
+  const cx=document.getElementById('stuDetailClose');
+  if(cx) cx.onclick=closeStudentDetail;
+})();
 // 모달 내부 X 버튼 → 해당 모달 닫기
 document.querySelectorAll('.modal-x[data-close]').forEach(x=>x.onclick=()=> x.closest('.modal-bg').classList.remove('show'));
 // ESC 키 → 열려 있는 모달 닫기
-document.addEventListener('keydown',e=>{ if(e.key==='Escape') document.querySelectorAll('.modal-bg.show').forEach(m=>m.classList.remove('show')); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeStudentDetail(); document.querySelectorAll('.modal-bg.show').forEach(m=>m.classList.remove('show')); } });
 
 const col=(name)=> collection(db,'classes',classId,name);
 const docRef=(name,id)=> doc(db,'classes',classId,name,id);
@@ -876,11 +891,12 @@ async function parseImportFile(file, cfg){
   }catch(e){ toast('파일을 읽지 못했어요'); return; }
   if(!rows || rows.length<2){ toast('데이터가 없어요'); return; }
   const headers = rows[0].map(h=>String(h).trim());
-  const find=(kw)=> headers.findIndex(h=>h.includes(kw));
-  const noIdx=find('학번'), nameIdx=find('이름');
-  if(noIdx<0 || nameIdx<0){ toast('학번/이름 열을 찾지 못했어요'); return; }
-  const tsIdx=headers.findIndex(h=>h.includes('타임')||/timestamp/i.test(h));
-  const qIdxs=headers.map((_,i)=>i).filter(i=> i!==noIdx && i!==nameIdx && i!==tsIdx);
+  const noIdx=headers.findIndex(h=>h.includes('학번'));
+  const nameIdx=headers.findIndex(h=>h.includes('이름')||h.includes('성명'));
+  if(noIdx<0 || nameIdx<0){ toast('학번/이름(성명) 열을 찾지 못했어요'); return; }
+  const skip=new Set([noIdx,nameIdx]);
+  headers.forEach((h,i)=>{ if(h.includes('타임')||/timestamp/i.test(h)||h.startsWith('일시')) skip.add(i); });
+  const qIdxs=headers.map((_,i)=>i).filter(i=> !skip.has(i));
   const questions=qIdxs.map(i=>headers[i]);
   const students=[];
   for(const r of rows.slice(1)){
@@ -928,6 +944,40 @@ function renderReportPanel(){
   if(!root) return;
   root.innerHTML = isTeacher ? teacherReportHTML() : studentReportHTML();
   bindReportEvents();
+  renderStudentDetailModal();
+}
+
+function closeStudentDetail(){
+  tNav.statusStudentNo='';
+  const m=document.getElementById('stuDetailModal');
+  if(m) m.classList.remove('show');
+}
+function renderStudentDetailModal(){
+  const modal=document.getElementById('stuDetailModal');
+  const body=document.getElementById('stuDetailBody');
+  if(!modal||!body) return;
+  if(!(isTeacher && tNav.tab==='status' && tNav.statusStudentNo && tNav.activityId)){
+    modal.classList.remove('show');
+    return;
+  }
+  const act=allActivities.find(a=>a.id===tNav.activityId);
+  const sessions=act?.sessions||[];
+  const subs=statusSubs.filter(d=>d.studentNo===tNav.statusStudentNo);
+  const bySession={}; subs.forEach(d=>{ bySession[d.sessionId]=d; });
+  const nm=subs[0]?.studentName||'';
+  body.innerHTML=`<h3 style="margin:0 0 12px">${esc(tNav.statusStudentNo)} ${esc(nm)} · 제출 내용</h3>`+
+    sessions.map(s=>{
+      const sub=bySession[s.id];
+      if(!sub) return `<div class="item"><div style="font-weight:700">${esc(s.title)}</div><div class="meta">미제출</div></div>`;
+      return `<div class="item">
+        <div style="font-weight:700;margin-bottom:6px">${esc(s.title)}</div>
+        ${(s.questions||[]).map((q,i)=>`<div style="margin:10px 0">
+          <div style="font-size:13px;color:var(--ink-soft);font-weight:700">${i+1}. ${esc(q)}</div>
+          <div style="white-space:pre-wrap;word-break:break-word;margin-top:3px">${esc(sub.answers?.[i]||'')||'<span style="color:var(--muted)">(빈 답변)</span>'}</div>
+        </div>`).join('')}
+      </div>`;
+    }).join('');
+  modal.classList.add('show');
 }
 
 function studentUser(){
@@ -1138,7 +1188,7 @@ function teacherManageHTML(){
 
 function teacherStatusHTML(){
   const options = allActivities.map(a=>`<option value="${a.id}" ${tNav.activityId===a.id?'selected':''}>${esc(a.area)} · ${esc(a.title)}</option>`).join('');
-  let table='', detail='';
+  let table='';
   if(tNav.activityId){
     const act=allActivities.find(a=>a.id===tNav.activityId);
     const sessions=act?.sessions||[];
@@ -1148,40 +1198,19 @@ function teacherStatusHTML(){
       byStudent[d.studentNo].sessions[d.sessionId]=true;
     });
     const rows=Object.entries(byStudent).map(([no,info])=>`
-      <tr data-act="statusStudent" data-no="${esc(no)}" style="cursor:pointer;${tNav.statusStudentNo===no?'background:#eef0ff':''}"><td>${esc(no)}</td><td>${esc(info.name)}</td>${sessions.map(s=>`<td>${info.sessions[s.id]?'✓':''}</td>`).join('')}</tr>`).join('');
+      <tr data-act="statusStudent" data-no="${esc(no)}" style="cursor:pointer"><td>${esc(no)}</td><td>${esc(info.name)}</td>${sessions.map(s=>`<td>${info.sessions[s.id]?'✓':''}</td>`).join('')}</tr>`).join('');
     table = `<div class="dtable-wrap"><table class="dtable">
       <thead><tr><th>학번</th><th>이름</th>${sessions.map(s=>`<th>${esc(s.title)}</th>`).join('')}</tr></thead>
       <tbody>${rows || `<tr><td colspan="${2+sessions.length}">제출 없음</td></tr>`}</tbody>
     </table></div>
-    <p class="hint">학생 줄을 누르면 제출한 답변 전체를 볼 수 있어요.</p>`;
-
-    if(tNav.statusStudentNo){
-      const subs=statusSubs.filter(d=>d.studentNo===tNav.statusStudentNo);
-      const bySession={}; subs.forEach(d=>{ bySession[d.sessionId]=d; });
-      const nm=subs[0]?.studentName||'';
-      detail=`<div class="card" style="border-left:4px solid var(--c-report)">
-        <h2>${esc(tNav.statusStudentNo)} ${esc(nm)} · 제출 내용</h2>
-        ${sessions.map(s=>{
-          const sub=bySession[s.id];
-          if(!sub) return `<div class="item"><div style="font-weight:700">${esc(s.title)}</div><div class="meta">미제출</div></div>`;
-          return `<div class="item">
-            <div style="font-weight:700;margin-bottom:6px">${esc(s.title)}</div>
-            ${(s.questions||[]).map((q,i)=>`<div style="margin:10px 0">
-              <div style="font-size:13px;color:var(--ink-soft);font-weight:700">${i+1}. ${esc(q)}</div>
-              <div style="white-space:pre-wrap;word-break:break-word;margin-top:3px">${esc(sub.answers?.[i]||'')||'<span style="color:var(--muted)">(빈 답변)</span>'}</div>
-            </div>`).join('')}
-          </div>`;
-        }).join('')}
-      </div>`;
-    }
+    <p class="hint">학생 줄을 누르면 제출한 답변이 팝업으로 떠요.</p>`;
   }
   return `<div class="card">
     <h2>제출 현황</h2>
     <select id="tStatusAct"><option value="">활동 선택</option>${options}</select>
     <div style="height:12px"></div>
     ${table}
-  </div>
-  ${detail}`;
+  </div>`;
 }
 
 function teacherRecordHTML(){

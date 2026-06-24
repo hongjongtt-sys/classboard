@@ -912,28 +912,37 @@ async function parseImportFile(file, cfg){
 async function runImport(){
   if(!importData) return;
   if(!db||!classId) return toast('학급 먼저 설정하세요');
-  const {target, newTitle, sessionTitle, area, questions, students}=importData;
-  const sessId=genId();
-  const session={ id:sessId, title:sessionTitle||'1차시', questions };
-  let activityId;
+  const {target, newTitle, sessionTitle, students}=importData;
+  const questions=importData.questions;
+  let activityId, sessId;
   if(target==='__new__'){
     if(!newTitle) return toast('새 활동 이름을 입력하세요');
-    const ref=await addDoc(col('reportActivities'),{ area, title:newTitle, sessions:[session], order:Date.now(), createdAt:serverTimestamp() });
+    sessId=genId();
+    const ref=await addDoc(col('reportActivities'),{ area:importData.area, title:newTitle, sessions:[{id:sessId,title:sessionTitle||'1차시',questions}], order:Date.now(), createdAt:serverTimestamp() });
     activityId=ref.id;
-  }else{
-    const act=allActivities.find(a=>a.id===target);
+  } else if(target.startsWith('new:')){
+    activityId=target.slice(4);
+    const act=allActivities.find(a=>a.id===activityId);
     if(!act) return toast('대상 활동을 찾을 수 없어요');
-    activityId=target;
-    await updateDoc(docRef('reportActivities',activityId),{ sessions:[...(act.sessions||[]), session] });
-  }
+    sessId=genId();
+    await updateDoc(docRef('reportActivities',activityId),{ sessions:[...(act.sessions||[]), {id:sessId,title:sessionTitle||'새 차시',questions}] });
+  } else if(target.startsWith('sess:')){
+    const p=target.split(':'); activityId=p[1]; sessId=p[2];
+    const act=allActivities.find(a=>a.id===activityId);
+    const sess=(act?.sessions||[]).find(s=>s.id===sessId);
+    if(!act||!sess) return toast('대상 차시를 찾을 수 없어요');
+    // 기존 차시 질문은 그대로 두고 학생만 갱신/추가
+  } else { return toast('대상을 선택하세요'); }
+  const act2=allActivities.find(a=>a.id===activityId);
+  const areaToUse = act2 ? act2.area : importData.area;
   toast('가져오는 중...');
   await Promise.all(students.map(st=> setDoc(docRef('reportSubmissions', subId(activityId, sessId, st.studentNo)),{
-    activityId, sessionId:sessId, area, studentNo:st.studentNo, studentName:st.studentName, answers:st.answers, updatedAt:serverTimestamp()
+    activityId, sessionId:sessId, area:areaToUse, studentNo:st.studentNo, studentName:st.studentName, answers:st.answers, updatedAt:serverTimestamp()
   })));
   const n=students.length;
   importData=null;
   renderReportPanel();
-  toast(`${n}명 가져오기 완료 ✓`);
+  toast(`${n}명 반영 완료 ✓`);
 }
 
 function subId(a,s,n){ return `${a}__${s}__${n}`; }
@@ -1149,11 +1158,18 @@ function teacherManageHTML(){
     </div>`;
   }
 
+  let importDesc='';
+  if(importData){
+    const tgt=importData.target;
+    if(tgt==='__new__') importDesc=esc(importData.newTitle||'(새 활동)')+' (새 활동 · '+esc(importData.sessionTitle||'1차시')+')';
+    else if(tgt.startsWith('new:')){ const a=allActivities.find(x=>x.id===tgt.slice(4)); importDesc='「'+esc(a?.title||'')+'」에 새 차시 "'+esc(importData.sessionTitle||'새 차시')+'" 추가'; }
+    else { const p=tgt.split(':'); const a=allActivities.find(x=>x.id===p[1]); const s=(a?.sessions||[]).find(x=>x.id===p[2]); importDesc='「'+esc(a?.title||'')+'」 · '+esc(s?.title||'')+'에 이어붙이기 (학번 기준 갱신/추가)'; }
+  }
   const importCard = importData ? `<div class="card">
     <h2>가져오기 확인</h2>
     <div class="item">
-      <div style="font-weight:700">${importData.target==='__new__'? esc(importData.newTitle||'(새 활동)')+' (새 활동)' : '「'+esc((allActivities.find(a=>a.id===importData.target)||{}).title||'')+'」에 차시 추가'}</div>
-      <div class="meta">영역 ${esc(importData.area)} · 차시 "${esc(importData.sessionTitle||'1차시')}" · 질문 ${importData.questions.length}개 · 학생 ${importData.students.length}명</div>
+      <div style="font-weight:700">${importDesc}</div>
+      <div class="meta">영역 ${esc(importData.area)} · 질문 ${importData.questions.length}개 · 학생 ${importData.students.length}명</div>
     </div>
     <div class="row">
       <button class="btn small" id="tImpRun" style="background:var(--c-report)">가져오기 실행</button>
@@ -1165,14 +1181,17 @@ function teacherManageHTML(){
     <label class="fld">대상</label>
     <select id="tImpTarget">
       <option value="__new__">+ 새 활동 만들기 (${esc(tNav.area)})</option>
-      ${list.map(a=>`<option value="${a.id}">「${esc(a.title)}」에 차시 추가</option>`).join('')}
+      ${list.map(a=>{
+        const sessOpts=(a.sessions||[]).map(s=>`<option value="sess:${a.id}:${s.id}">「${esc(a.title)}」 · ${esc(s.title)}에 이어붙이기(같은 차시 보충)</option>`).join('');
+        return `<option value="new:${a.id}">「${esc(a.title)}」에 새 차시 추가</option>`+sessOpts;
+      }).join('')}
     </select>
     <div id="tImpNewWrap"><label class="fld">새 활동 이름</label><input type="text" id="tImpNewTitle" placeholder="예: 진로 현안 분석 리포트" /></div>
-    <label class="fld">차시 제목</label>
-    <input type="text" id="tImpSession" placeholder="예: 1차시" value="1차시" />
+    <div id="tImpSessionWrap"><label class="fld">차시 제목</label>
+    <input type="text" id="tImpSession" placeholder="예: 1차시" value="1차시" /></div>
     <label class="fld">엑셀 파일 (.xlsx)</label>
     <input type="file" id="tImpFile" accept=".xlsx,.xls,.csv" />
-    <p class="hint">파일을 고르면 자동으로 분석합니다. 학번·이름 열은 제목으로 자동 인식돼요.</p>
+    <p class="hint">파일을 고르면 자동으로 분석합니다. 같은 차시를 다시 올리면 학번 기준으로 갱신/추가돼요(중복 차시 안 생김).</p>
   </div>`;
 
   return `<div class="card">
@@ -1190,7 +1209,12 @@ function teacherManageHTML(){
 }
 
 function teacherStatusHTML(){
-  const options = allActivities.map(a=>`<option value="${a.id}" ${tNav.activityId===a.id?'selected':''}>${esc(a.area)} · ${esc(a.title)}</option>`).join('');
+  const sArea = tNav.statusArea || '진로';
+  const areaSeg = `<div class="seg">
+    <button class="tStatusAreaBtn ${sArea==='진로'?'on':''}" data-area="진로">진로</button>
+    <button class="tStatusAreaBtn ${sArea==='자율'?'on':''}" data-area="자율">자율</button>
+  </div>`;
+  const options = allActivities.filter(a=>a.area===sArea).map(a=>`<option value="${a.id}" ${tNav.activityId===a.id?'selected':''}>${esc(a.title)}</option>`).join('');
   let table='';
   if(tNav.activityId){
     const act=allActivities.find(a=>a.id===tNav.activityId);
@@ -1210,6 +1234,8 @@ function teacherStatusHTML(){
   }
   return `<div class="card">
     <h2>제출 현황</h2>
+    ${areaSeg}
+    <div style="height:10px"></div>
     <select id="tStatusAct"><option value="">활동 선택</option>${options}</select>
     ${tNav.activityId?`<div style="height:10px"></div><button class="btn small ghost" id="tPrintAll" style="width:auto">전체 인쇄</button>`:''}
     <div style="height:12px"></div>
@@ -1426,8 +1452,9 @@ function bindReportEvents(){
 
   // 엑셀 일괄 가져오기
   if(byId('tImpTarget')) byId('tImpTarget').onchange=()=>{
-    const w=byId('tImpNewWrap');
-    if(w) w.style.display = byId('tImpTarget').value==='__new__' ? 'block' : 'none';
+    const v=byId('tImpTarget').value;
+    const nw=byId('tImpNewWrap'); if(nw) nw.style.display = v==='__new__' ? 'block':'none';
+    const sw=byId('tImpSessionWrap'); if(sw) sw.style.display = v.startsWith('sess:') ? 'none':'block';
   };
   if(byId('tImpFile')) byId('tImpFile').onchange=(e)=>{
     const file=e.target.files[0];
@@ -1474,6 +1501,11 @@ function bindReportEvents(){
     await updateDoc(docRef('reportActivities',act.id),{sessions});
   });
 
+  document.querySelectorAll('.tStatusAreaBtn').forEach(b=>b.onclick=()=>{
+    tNav.statusArea=b.dataset.area; tNav.activityId=null; tNav.statusStudentNo='';
+    if(statusUnsub){statusUnsub();statusUnsub=null;} statusSubs=[];
+    renderReportPanel();
+  });
   if(byId('tStatusAct')) byId('tStatusAct').onchange=(e)=>{
     tNav.activityId=e.target.value||null; tNav.statusStudentNo=''; subscribeStatus(tNav.activityId); renderReportPanel();
   };

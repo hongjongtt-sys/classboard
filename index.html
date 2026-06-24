@@ -151,7 +151,9 @@
   .banner b{color:#5b4512}
   .modal-bg{position:fixed;inset:0;background:rgba(31,42,68,.42);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;z-index:50;padding:18px}
   .modal-bg.show{display:flex}
-  .modal{background:var(--paper-card);border-radius:18px;padding:24px;max-width:380px;width:100%;box-shadow:0 24px 60px -12px rgba(31,42,68,.4);border:1px solid var(--line);animation:pop .22s var(--ease)}
+  .modal{position:relative;background:var(--paper-card);border-radius:18px;padding:24px;max-width:380px;width:100%;box-shadow:0 24px 60px -12px rgba(31,42,68,.4);border:1px solid var(--line);animation:pop .22s var(--ease)}
+  .modal-x{position:absolute;top:12px;right:12px;width:32px;height:32px;border:none;background:transparent;color:var(--muted);font-size:22px;line-height:1;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s var(--ease)}
+  .modal-x:hover{background:var(--line);color:var(--ink)}
   @keyframes pop{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
   .modal h3{margin:0 0 6px;font-size:17px;letter-spacing:-.02em}
   .modal p{margin:0 0 14px;font-size:13.5px;color:var(--muted);line-height:1.55}
@@ -398,6 +400,7 @@
 
 <div class="modal-bg" id="classModal">
   <div class="modal">
+    <button class="modal-x" data-close aria-label="닫기">×</button>
     <h3>학급 코드</h3>
     <p>예: 2-3 (2학년 3반). 같은 코드를 쓰면 모두 같은 화면을 공유합니다.</p>
     <input type="text" id="classInput" placeholder="2-3" />
@@ -407,6 +410,7 @@
 </div>
 <div class="modal-bg" id="pinModal">
   <div class="modal">
+    <button class="modal-x" data-close aria-label="닫기">×</button>
     <h3>교사 로그인</h3>
     <p>선생님 계정으로 로그인하면 건의 열람·공지·계좌·표 관리가 열립니다.</p>
     <input type="email" id="emailInput" placeholder="이메일" autocomplete="username" />
@@ -503,7 +507,6 @@ document.getElementById('loginBtn').onclick=async()=>{
     toast('로그인 실패 — 이메일·비밀번호를 확인하세요');
   }
 };
-applyMode();
 
 /* ---------- 탭 ---------- */
 document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
@@ -517,11 +520,18 @@ document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
 });
 
 document.querySelectorAll('.modal-bg').forEach(m=>m.onclick=e=>{if(e.target===m)m.classList.remove('show')});
+// 모달 내부 X 버튼 → 해당 모달 닫기
+document.querySelectorAll('.modal-x[data-close]').forEach(x=>x.onclick=()=> x.closest('.modal-bg').classList.remove('show'));
+// ESC 키 → 열려 있는 모달 닫기
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') document.querySelectorAll('.modal-bg.show').forEach(m=>m.classList.remove('show')); });
 
 const col=(name)=> collection(db,'classes',classId,name);
 const docRef=(name,id)=> doc(db,'classes',classId,name,id);
 const fmt=(ts)=>{ if(!ts) return ''; const d=ts.toDate?ts.toDate():new Date(ts); return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; };
 const esc=(s='')=> s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+/* 헬퍼(esc 등)가 모두 선언된 뒤에 초기 모드 적용 + 보고서 패널 첫 렌더 */
+applyMode();
 
 /* ===== 알림판 — 공지 ===== */
 document.getElementById('nAdd').onclick=async()=>{

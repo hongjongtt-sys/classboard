@@ -1252,7 +1252,12 @@ function teacherRecordHTML(){
     <button class="btn small" id="tSaveKey" style="background:var(--c-report)">키 저장</button>
   </div>`;
 
-  const options = allActivities.map(a=>`<option value="${a.id}" ${tNav.activityId===a.id?'selected':''}>${esc(a.area)} · ${esc(a.title)}</option>`).join('');
+  const rArea = tNav.recordArea || '진로';
+  const areaSeg = `<div class="seg">
+    <button class="tRecordAreaBtn ${rArea==='진로'?'on':''}" data-area="진로">진로</button>
+    <button class="tRecordAreaBtn ${rArea==='자율'?'on':''}" data-area="자율">자율</button>
+  </div>`;
+  const options = allActivities.filter(a=>a.area===rArea).map(a=>`<option value="${a.id}" ${tNav.activityId===a.id?'selected':''}>${esc(a.title)}</option>`).join('');
   const students={};
   statusSubs.forEach(d=>{ students[d.studentNo]=d.studentName; });
   const studentOptions = Object.entries(students).map(([no,name])=>`<option value="${no}" ${tNav.selectedStudentNo===no?'selected':''}>${esc(no)} ${esc(name)}</option>`).join('');
@@ -1276,6 +1281,8 @@ function teacherRecordHTML(){
   return `${keyCard}
   <div class="card">
     <h2>생기부 생성</h2>
+    ${areaSeg}
+    <div style="height:10px"></div>
     <label class="fld">활동</label>
     <select id="tRecordAct"><option value="">활동 선택</option>${options}</select>
     ${tNav.activityId?`<label class="fld">학생</label><select id="tRecordStudent"><option value="">학생 선택</option>${studentOptions}</select>`:''}
@@ -1520,6 +1527,11 @@ function bindReportEvents(){
   });
   if(byId('tPrintAll')) byId('tPrintAll').onclick=printActivityAll;
 
+  document.querySelectorAll('.tRecordAreaBtn').forEach(b=>b.onclick=()=>{
+    tNav.recordArea=b.dataset.area; tNav.activityId=null; tNav.selectedStudentNo=''; teacherRecord=null;
+    if(statusUnsub){statusUnsub();statusUnsub=null;} statusSubs=[];
+    renderReportPanel();
+  });
   if(byId('tRecordAct')) byId('tRecordAct').onchange=(e)=>{
     tNav.activityId=e.target.value||null; tNav.selectedStudentNo='';
     teacherRecord=null; subscribeStatus(tNav.activityId); renderReportPanel();

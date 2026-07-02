@@ -1225,7 +1225,7 @@ function teacherStatusHTML(){
       byStudent[d.studentNo].sessions[d.sessionId]=true;
     });
     const rows=Object.entries(byStudent).map(([no,info])=>`
-      <tr data-act="statusStudent" data-no="${esc(no)}" style="cursor:pointer"><td>${esc(no)}</td><td>${esc(info.name)}</td>${sessions.map(s=>`<td>${info.sessions[s.id]?'✓':''}</td>`).join('')}</tr>`).join('');
+      <tr data-act="statusStudent" data-no="${esc(no)}" style="cursor:pointer"><td>${esc(no)}</td><td>${esc(info.name)}</td>${sessions.map(s=>`<td>${info.sessions[s.id]?'✓':'X'}</td>`).join('')}</tr>`).join('');
     table = `<div class="dtable-wrap"><table class="dtable">
       <thead><tr><th>학번</th><th>이름</th>${sessions.map(s=>`<th>${esc(s.title)}</th>`).join('')}</tr></thead>
       <tbody>${rows || `<tr><td colspan="${2+sessions.length}">제출 없음</td></tr>`}</tbody>

@@ -19,6 +19,7 @@
     --c-roles:#3f9e5a;
     --c-praise:#e0902f;
     --c-report:#6c5ce7;
+    --c-merit:#b45309;
     --danger:#d4574a;
     --accent:var(--c-board);
     --radius:16px;
@@ -84,12 +85,14 @@
   .tab[data-k="roles"]   .dot{background:var(--c-roles)}
   .tab[data-k="praise"]  .dot{background:var(--c-praise)}
   .tab[data-k="report"]  .dot{background:var(--c-report)}
+  .tab[data-k="merit"]   .dot{background:var(--c-merit)}
   .tab.active{color:#fff;border-color:transparent;box-shadow:0 6px 16px -6px rgba(31,42,68,.4)}
   .tab.active[data-k="board"]{background:var(--c-board)}
   .tab.active[data-k="suggest"]{background:var(--c-suggest)}
   .tab.active[data-k="roles"]{background:var(--c-roles)}
   .tab.active[data-k="praise"]{background:var(--c-praise)}
   .tab.active[data-k="report"]{background:var(--c-report)}
+  .tab.active[data-k="merit"]{background:var(--c-merit)}
   .tab.active .dot{background:#fff}
   .panel{display:none;animation:fade .3s var(--ease)}
   .panel.active{display:block}
@@ -204,6 +207,10 @@
   .acct-num{font-size:23px;font-weight:800;letter-spacing:.5px;margin:6px 0 14px;word-break:break-all}
   .acct-copy{background:#fff;color:var(--ink)}
   .acct-memo{margin-top:14px;padding-top:13px;border-top:1px solid rgba(255,255,255,.15);font-size:14px;color:#ffe9a8}
+  .meritInput{width:64px;font:inherit;font-size:14px;color:var(--ink);background:#fff;border:1px solid var(--line-strong);border-radius:8px;padding:6px 8px}
+  .meritInput:focus{outline:none;border-color:var(--c-merit);box-shadow:0 0 0 3.5px color-mix(in srgb,var(--c-merit) 15%,transparent)}
+  table.dtable tr.merit-yellow td{background:#fff3b0 !important}
+  table.dtable tr.merit-pink td{background:#ffd0e6 !important}
 </style>
 </head>
 <body>
@@ -223,6 +230,7 @@
     <button class="tab" data-k="roles"><span class="dot"></span>1인1역</button>
     <button class="tab" data-k="praise"><span class="dot"></span>칭찬</button>
     <button class="tab" data-k="report"><span class="dot"></span>보고서</button>
+    <button class="tab" data-k="merit"><span class="dot"></span>상벌점</button>
   </nav>
 </header>
 
@@ -397,6 +405,11 @@
     <div id="reportRoot"></div>
   </section>
 
+  <!-- ===================== 상벌점 ===================== -->
+  <section class="panel" data-panel="merit">
+    <div id="meritRoot"></div>
+  </section>
+
 </div>
 
 <div class="modal-bg" id="classModal">
@@ -468,6 +481,8 @@ let teacherRecord = null;
 let teacherRecordUnsub = null;
 let importData = null;       // 엑셀 일괄 가져오기: 분석된 데이터
 let studentAuthMode = 'login';  // 학생 화면: 'login' | 'signup'
+let allMerit = [];           // 상벌점 데이터
+let meritLastUpdated = '';   // 상벌점 마지막 수정일
 
 /* ---------- 학급 코드 ---------- */
 const params=new URLSearchParams(location.search);
@@ -527,9 +542,10 @@ document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
   document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
   t.classList.add('active');
   document.querySelector(`[data-panel="${t.dataset.k}"]`).classList.add('active');
-  const colors={board:'--c-board',suggest:'--c-suggest',roles:'--c-roles',praise:'--c-praise',report:'--c-report'};
+  const colors={board:'--c-board',suggest:'--c-suggest',roles:'--c-roles',praise:'--c-praise',report:'--c-report',merit:'--c-merit'};
   document.documentElement.style.setProperty('--accent',`var(${colors[t.dataset.k]})`);
   if(t.dataset.k==='report') renderReportPanel();
+  if(t.dataset.k==='merit') renderMeritPanel();
 });
 
 document.querySelectorAll('.modal-bg').forEach(m=>m.onclick=e=>{if(e.target===m)m.classList.remove('show')});
@@ -835,6 +851,14 @@ function startListeners(){
   unsubs.push(onSnapshot(query(col('reportActivities'),orderBy('order','asc')),s=>{
     allActivities = s.docs.map(d=>({id:d.id,...d.data()}));
     renderReportPanel();
+  }, err=>{ }));
+  unsubs.push(onSnapshot(query(col('meritPoints'),orderBy('studentNo','asc')),s=>{
+    allMerit = s.docs.map(d=>({id:d.id,...d.data()}));
+    renderMeritPanel();
+  }, err=>{ }));
+  unsubs.push(onSnapshot(docRef('meritMeta','info'),s=>{
+    meritLastUpdated = s.exists() ? (s.data().lastUpdated||'') : '';
+    renderMeritPanel();
   }, err=>{ }));
 }
 
@@ -1582,6 +1606,138 @@ function bindReportEvents(){
       content:byId('tRecordText').value, status:'draft'
     });
     toast('채택을 취소했어요 · 학생 안 보임');
+  };
+}
+
+/* =========================================================
+   상벌점
+   ========================================================= */
+function meritTotal(m){ return (Number(m.demerit)||0) - (Number(m.merit)||0); }
+function meritRowClass(total){
+  if(total>=21) return 'merit-pink';
+  if(total>=11) return 'merit-yellow';
+  return '';
+}
+function sortedMerit(){
+  return allMerit.slice().sort((a,b)=> String(a.studentNo).localeCompare(String(b.studentNo),'ko',{numeric:true}));
+}
+function renderMeritPanel(){
+  const root=document.getElementById('meritRoot');
+  if(!root) return;
+  root.innerHTML = isTeacher ? teacherMeritHTML() : studentMeritHTML();
+  bindMeritEvents();
+}
+function studentMeritHTML(){
+  const rows=sortedMerit();
+  const body = rows.length ? rows.map(m=>{
+    const total=meritTotal(m);
+    return `<tr class="${meritRowClass(total)}">
+      <td>${esc(m.studentNo)}</td><td>${esc(m.name||'')}</td>
+      <td>${Number(m.merit)||0}</td><td>${Number(m.demerit)||0}</td>
+      <td style="font-weight:800">${total}</td>
+    </tr>`;
+  }).join('') : `<tr><td colspan="5">등록된 내용이 없어요.</td></tr>`;
+  return `<div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+      <h2 style="margin:0">상벌점 현황</h2>
+      <span style="font-size:12.5px;color:var(--muted);font-weight:700">${meritLastUpdated?`최종 수정일 · ${esc(meritLastUpdated)}`:''}</span>
+    </div>
+    <p class="sub" style="margin-top:6px">누계 = 벌점 − 상점 (음수일수록 좋아요)</p>
+    <div class="dtable-wrap"><table class="dtable">
+      <thead><tr><th>학번</th><th>이름</th><th>상점</th><th>벌점</th><th>누계</th></tr></thead>
+      <tbody>${body}</tbody>
+    </table></div>
+    <p class="hint">누계 11점 이상은 노란색, 21점 이상은 분홍색으로 표시돼요.</p>
+  </div>`;
+}
+function teacherMeritHTML(){
+  const rows=sortedMerit();
+  const body = rows.length ? rows.map(m=>{
+    const total=meritTotal(m);
+    return `<tr class="${meritRowClass(total)}">
+      <td>${esc(m.studentNo)}</td><td>${esc(m.name||'')}</td>
+      <td><input type="number" class="meritInput" data-act="meritMerit" data-no="${esc(m.studentNo)}" value="${Number(m.merit)||0}" min="0"/></td>
+      <td><input type="number" class="meritInput" data-act="meritDemerit" data-no="${esc(m.studentNo)}" value="${Number(m.demerit)||0}" min="0"/></td>
+      <td style="font-weight:800">${total}</td>
+      <td><button class="btn small danger" data-act="delMerit" data-no="${esc(m.studentNo)}" style="width:auto">삭제</button></td>
+    </tr>`;
+  }).join('') : `<tr><td colspan="6">등록된 학생이 없어요.</td></tr>`;
+  return `<div class="card">
+    <h2>학생 추가</h2>
+    <div class="row">
+      <div><label class="fld">학번</label><input type="text" id="mtNo" placeholder="예: 20301" /></div>
+      <div><label class="fld">이름</label><input type="text" id="mtName" placeholder="이름" /></div>
+    </div>
+    <div style="height:10px"></div>
+    <button class="btn small" id="mtAdd" style="background:var(--c-merit)">학생 추가</button>
+    <hr class="soft" />
+    <label class="fld">한 번에 여러 명 추가 (한 줄에 학번, 이름)</label>
+    <textarea id="mtBulk" placeholder="20301&#9;김민준&#10;20302&#9;이서연&#10;20303&#9;박지후"></textarea>
+    <p class="hint">스프레드시트에서 학번·이름 두 열을 복사해 붙여넣어도 돼요.</p>
+    <div style="height:10px"></div>
+    <button class="btn small" id="mtBulkAdd" style="background:var(--c-merit)">일괄 추가</button>
+  </div>
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+      <h2 style="margin:0">상벌점 현황</h2>
+      <div style="display:flex;align-items:center;gap:6px;flex:0 0 auto">
+        <input type="date" id="mtLastDate" value="${esc(meritLastUpdated||'')}" style="width:150px" />
+        <button class="btn small" id="mtSaveDate" style="background:var(--c-merit);width:auto">저장</button>
+      </div>
+    </div>
+    <p class="sub" style="margin-top:6px">상점·벌점 칸에 바로 입력하면 저장돼요. 누계 = 벌점 − 상점 (음수일수록 좋아요).</p>
+    <div class="dtable-wrap"><table class="dtable">
+      <thead><tr><th>학번</th><th>이름</th><th>상점</th><th>벌점</th><th>누계</th><th>삭제</th></tr></thead>
+      <tbody>${body}</tbody>
+    </table></div>
+    <p class="hint">누계 11점 이상은 노란색, 21점 이상은 분홍색으로 표시돼요.</p>
+  </div>`;
+}
+function bindMeritEvents(){
+  const byId=id=>document.getElementById(id);
+  if(byId('mtAdd')) byId('mtAdd').onclick=async()=>{
+    if(!db||!classId) return toast('학급 먼저 설정하세요');
+    const no=byId('mtNo').value.trim();
+    const name=byId('mtName').value.trim();
+    if(!no||!name) return toast('학번과 이름을 입력하세요');
+    await setDoc(docRef('meritPoints',no),{studentNo:no,name,merit:0,demerit:0,updatedAt:serverTimestamp()},{merge:true});
+    byId('mtNo').value=''; byId('mtName').value='';
+    toast('학생을 추가했어요');
+  };
+  if(byId('mtBulkAdd')) byId('mtBulkAdd').onclick=async()=>{
+    if(!db||!classId) return toast('학급 먼저 설정하세요');
+    const raw=byId('mtBulk').value;
+    const lines=String(raw||'').replace(/\r/g,'').split('\n').map(l=>l.trim()).filter(Boolean);
+    if(!lines.length) return toast('추가할 내용을 입력하세요');
+    const entries=lines.map(l=>{
+      const parts = l.includes('\t') ? l.split('\t') : l.split(',');
+      return { no:(parts[0]||'').trim(), name:(parts[1]||'').trim() };
+    }).filter(e=>e.no);
+    if(!entries.length) return toast('학번을 확인하세요');
+    await Promise.all(entries.map(e=> setDoc(docRef('meritPoints',e.no),{studentNo:e.no,name:e.name,merit:0,demerit:0,updatedAt:serverTimestamp()},{merge:true})));
+    byId('mtBulk').value='';
+    toast(`${entries.length}명 추가했어요`);
+  };
+  document.querySelectorAll('[data-act="meritMerit"]').forEach(el=>el.onchange=async()=>{
+    const no=el.dataset.no;
+    const v=Math.max(0, parseInt(el.value)||0);
+    await updateDoc(docRef('meritPoints',no),{merit:v, updatedAt:serverTimestamp()});
+  });
+  document.querySelectorAll('[data-act="meritDemerit"]').forEach(el=>el.onchange=async()=>{
+    const no=el.dataset.no;
+    const v=Math.max(0, parseInt(el.value)||0);
+    await updateDoc(docRef('meritPoints',no),{demerit:v, updatedAt:serverTimestamp()});
+  });
+  document.querySelectorAll('[data-act="delMerit"]').forEach(el=>el.onclick=async()=>{
+    if(!confirm('이 학생의 상벌점 기록을 삭제할까요?')) return;
+    await deleteDoc(docRef('meritPoints',el.dataset.no));
+  });
+  if(byId('mtSaveDate')) byId('mtSaveDate').onclick=async()=>{
+    if(!db||!classId) return toast('학급 먼저 설정하세요');
+    const v=byId('mtLastDate').value;
+    if(!v) return toast('날짜를 선택하세요');
+    await setDoc(docRef('meritMeta','info'),{lastUpdated:v, updatedAt:serverTimestamp()},{merge:true});
+    toast('마지막 수정일을 저장했어요');
   };
 }
 

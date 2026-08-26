@@ -1655,7 +1655,8 @@ function teacherMeritHTML(){
   const body = rows.length ? rows.map(m=>{
     const total=meritTotal(m);
     return `<tr class="${meritRowClass(total)}">
-      <td>${esc(m.studentNo)}</td><td>${esc(m.name||'')}</td>
+      <td><input type="text" class="meritInput" style="width:88px" data-act="meritNo" data-no="${esc(m.studentNo)}" value="${esc(m.studentNo)}"/></td>
+      <td><input type="text" class="meritInput" style="width:110px" data-act="meritName" data-no="${esc(m.studentNo)}" value="${esc(m.name||'')}"/></td>
       <td><input type="number" class="meritInput" data-act="meritMerit" data-no="${esc(m.studentNo)}" value="${Number(m.merit)||0}" min="0"/></td>
       <td><input type="number" class="meritInput" data-act="meritDemerit" data-no="${esc(m.studentNo)}" value="${Number(m.demerit)||0}" min="0"/></td>
       <td style="font-weight:800">${total}</td>
@@ -1741,12 +1742,39 @@ function bindMeritEvents(){
   document.querySelectorAll('[data-act="meritMerit"]').forEach(el=>el.onchange=async()=>{
     const no=el.dataset.no;
     const v=Math.max(0, parseInt(el.value)||0);
-    await updateDoc(docRef('meritPoints',no),{merit:v, updatedAt:serverTimestamp()});
+    try{ await updateDoc(docRef('meritPoints',no),{merit:v, updatedAt:serverTimestamp()}); }
+    catch(e){ toast('저장 실패 — '+(e && e.message ? e.message : '오류가 발생했어요')); }
   });
   document.querySelectorAll('[data-act="meritDemerit"]').forEach(el=>el.onchange=async()=>{
     const no=el.dataset.no;
     const v=Math.max(0, parseInt(el.value)||0);
-    await updateDoc(docRef('meritPoints',no),{demerit:v, updatedAt:serverTimestamp()});
+    try{ await updateDoc(docRef('meritPoints',no),{demerit:v, updatedAt:serverTimestamp()}); }
+    catch(e){ toast('저장 실패 — '+(e && e.message ? e.message : '오류가 발생했어요')); }
+  });
+  document.querySelectorAll('[data-act="meritName"]').forEach(el=>el.onchange=async()=>{
+    const no=el.dataset.no;
+    const name=el.value.trim();
+    try{ await updateDoc(docRef('meritPoints',no),{name, updatedAt:serverTimestamp()}); }
+    catch(e){ toast('저장 실패 — '+(e && e.message ? e.message : '오류가 발생했어요')); }
+  });
+  document.querySelectorAll('[data-act="meritNo"]').forEach(el=>el.onchange=async()=>{
+    const oldNo=el.dataset.no;
+    const newNo=el.value.trim();
+    if(!newNo){ el.value=oldNo; return toast('학번을 입력하세요'); }
+    if(newNo===oldNo) return;
+    const dup = allMerit.find(m=>String(m.studentNo)===newNo);
+    if(dup && !confirm(`학번 ${newNo}은(는) 이미 있어요. 덮어쓸까요?`)){ el.value=oldNo; return; }
+    const cur = allMerit.find(m=>String(m.studentNo)===oldNo) || {};
+    try{
+      await setDoc(docRef('meritPoints',newNo),{
+        studentNo:newNo, name:cur.name||'', merit:Number(cur.merit)||0, demerit:Number(cur.demerit)||0, updatedAt:serverTimestamp()
+      },{merge:true});
+      await deleteDoc(docRef('meritPoints',oldNo));
+      toast('학번을 수정했어요');
+    }catch(e){
+      el.value=oldNo;
+      toast('저장 실패 — '+(e && e.message ? e.message : '오류가 발생했어요'));
+    }
   });
   document.querySelectorAll('[data-act="delMerit"]').forEach(el=>el.onclick=async()=>{
     if(!confirm('이 학생의 상벌점 기록을 삭제할까요?')) return;

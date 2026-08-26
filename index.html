@@ -1654,7 +1654,7 @@ function studentMeritHTML(){
     const total=meritTotal(m);
     return `<tr class="${meritRowClass(total)}">
       <td>${esc(m.studentNo)}</td><td>${esc(m.name||'')}</td>
-      <td>${Number(m.merit)||0}</td><td>${Number(m.demerit)||0}</td>
+      <td>${Number(m.demerit)||0}</td><td>${Number(m.merit)||0}</td>
       <td style="font-weight:800">${total}</td>
     </tr>`;
   }).join('') : `<tr><td colspan="5">등록된 내용이 없어요.</td></tr>`;
@@ -1665,7 +1665,7 @@ function studentMeritHTML(){
     </div>
     <p class="sub" style="margin-top:6px">누계 = 벌점 − 상점 (음수일수록 좋아요)</p>
     <div class="dtable-wrap"><table class="dtable">
-      <thead><tr><th>학번</th><th>이름</th><th>상점</th><th>벌점</th><th>누계</th></tr></thead>
+      <thead><tr><th>학번</th><th>이름</th><th>벌점</th><th>상점</th><th>누계</th></tr></thead>
       <tbody>${body}</tbody>
     </table></div>
     <p class="hint">누계 11점 이상은 노란색, 21점 이상은 분홍색으로 표시돼요.</p>
@@ -1678,8 +1678,8 @@ function teacherMeritHTML(){
     return `<tr class="${meritRowClass(total)}">
       <td><input type="text" class="meritInput" style="width:88px" data-act="meritNo" data-no="${esc(m.studentNo)}" value="${esc(m.studentNo)}"/></td>
       <td><input type="text" class="meritInput" style="width:110px" data-act="meritName" data-no="${esc(m.studentNo)}" value="${esc(m.name||'')}"/></td>
-      <td><input type="number" class="meritInput" data-act="meritMerit" data-no="${esc(m.studentNo)}" value="${Number(m.merit)||0}" min="0"/></td>
       <td><input type="number" class="meritInput" data-act="meritDemerit" data-no="${esc(m.studentNo)}" value="${Number(m.demerit)||0}" min="0"/></td>
+      <td><input type="number" class="meritInput" data-act="meritMerit" data-no="${esc(m.studentNo)}" value="${Number(m.merit)||0}" min="0"/></td>
       <td style="font-weight:800">${total}</td>
       <td><button class="btn small danger" data-act="delMerit" data-no="${esc(m.studentNo)}" style="width:auto" tabindex="-1">삭제</button></td>
     </tr>`;
@@ -1709,7 +1709,7 @@ function teacherMeritHTML(){
     </div>
     <p class="sub" style="margin-top:6px">상점·벌점 칸에 바로 입력하면 저장돼요. 누계 = 벌점 − 상점 (음수일수록 좋아요).</p>
     <div class="dtable-wrap"><table class="dtable">
-      <thead><tr><th>학번</th><th>이름</th><th>상점</th><th>벌점</th><th>누계</th><th>삭제</th></tr></thead>
+      <thead><tr><th>학번</th><th>이름</th><th>벌점</th><th>상점</th><th>누계</th><th>삭제</th></tr></thead>
       <tbody>${body}</tbody>
     </table></div>
     <p class="hint">누계 11점 이상은 노란색, 21점 이상은 분홍색으로 표시돼요.</p>

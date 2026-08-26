@@ -1351,11 +1351,11 @@ function printHtml(title, inner, fitOnePage){
   const w=window.open('', '_blank');
   if(!w){ toast('팝업이 차단됐어요. 팝업 허용 후 다시 시도하세요'); return; }
   const fitScript = fitOnePage
-    ? 'try{var el=document.getElementById("printFit");if(el){var availPx=(269*96/25.4);if(el.scrollHeight>availPx){el.style.zoom=Math.max(0.3, availPx/el.scrollHeight);}}}catch(e){}'
+    ? 'try{var el=document.getElementById("printFit");if(el){var availPx=(269*96/25.4)*0.98;if(el.scrollHeight>availPx){el.style.zoom=Math.max(0.3, availPx/el.scrollHeight);}}}catch(e){}'
     : '';
   w.document.write('<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><title>'+title+'</title><style>'
     +'body{font-family:"Malgun Gothic",sans-serif;line-height:1.6;color:#1e2a3a;padding:0;margin:0}'
-    +'.page{padding:28px 32px;page-break-after:always;page-break-inside:avoid}'
+    +'.page{padding:28px 32px;width:182mm;box-sizing:border-box;margin:0 auto;page-break-after:always;page-break-inside:avoid}'
     +'.page:last-child{page-break-after:auto}'
     +'.phead{font-size:16px;font-weight:800;border-bottom:2px solid #333;padding-bottom:8px;margin-bottom:14px;color:#1e2a3a}'
     +'.q{font-weight:700;font-size:13px;color:#333;margin-top:12px}'
@@ -1634,11 +1634,11 @@ function printMeritAll(fitOnePage){
     return `<tr><td>${esc(m.studentNo)}</td><td>${esc(m.name||'')}</td><td>${Number(m.demerit)||0}</td><td>${Number(m.merit)||0}</td><td>${total}</td></tr>`;
   }).join('');
   const head = `${esc(classId?classId+'반 ':'')}상벌점 현황${meritLastUpdated?' · 최종 수정일 '+esc(meritLastUpdated):''}`;
-  const inner = `<div class="page"><div id="printFit">
+  const inner = `<div id="printFit" class="page">
     <div class="phead">${head}</div>
     <table><thead><tr><th>학번</th><th>이름</th><th>벌점</th><th>상점</th><th>누계</th></tr></thead>
     <tbody>${rows}</tbody></table>
-  </div></div>`;
+  </div>`;
   printHtml(`상벌점_${classId||''}`, inner, !!fitOnePage);
 }
 function renderMeritPanel(){

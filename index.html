@@ -1624,8 +1624,29 @@ function sortedMerit(){
 function renderMeritPanel(){
   const root=document.getElementById('meritRoot');
   if(!root) return;
+  // 재렌더링으로 포커스/입력 중인 값이 끊기지 않도록, 지금 포커스된 칸을 기억해뒀다 복원
+  const active=document.activeElement;
+  let focusInfo=null;
+  if(active && root.contains(active) && active.dataset && active.dataset.act){
+    focusInfo={
+      act:active.dataset.act, no:active.dataset.no, value:active.value,
+      selStart:active.selectionStart, selEnd:active.selectionEnd
+    };
+  }
   root.innerHTML = isTeacher ? teacherMeritHTML() : studentMeritHTML();
   bindMeritEvents();
+  if(focusInfo){
+    let sel;
+    try{ sel = `[data-act="${focusInfo.act}"][data-no="${CSS.escape(focusInfo.no)}"]`; }catch(e){ sel=null; }
+    const el = sel ? root.querySelector(sel) : null;
+    if(el){
+      el.value = focusInfo.value;
+      el.focus();
+      if(typeof focusInfo.selStart==='number' && el.setSelectionRange){
+        try{ el.setSelectionRange(focusInfo.selStart, focusInfo.selEnd); }catch(e){}
+      }
+    }
+  }
 }
 function studentMeritHTML(){
   const rows=sortedMerit();

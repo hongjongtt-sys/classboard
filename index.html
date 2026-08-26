@@ -1700,9 +1700,13 @@ function bindMeritEvents(){
     const no=byId('mtNo').value.trim();
     const name=byId('mtName').value.trim();
     if(!no||!name) return toast('학번과 이름을 입력하세요');
-    await setDoc(docRef('meritPoints',no),{studentNo:no,name,merit:0,demerit:0,updatedAt:serverTimestamp()},{merge:true});
-    byId('mtNo').value=''; byId('mtName').value='';
-    toast('학생을 추가했어요');
+    try{
+      await setDoc(docRef('meritPoints',no),{studentNo:no,name,merit:0,demerit:0,updatedAt:serverTimestamp()},{merge:true});
+      byId('mtNo').value=''; byId('mtName').value='';
+      toast('학생을 추가했어요');
+    }catch(e){
+      toast('저장 실패 — '+(e && e.message ? e.message : '오류가 발생했어요'));
+    }
   };
   if(byId('mtBulkAdd')) byId('mtBulkAdd').onclick=async()=>{
     if(!db||!classId) return toast('학급 먼저 설정하세요');
@@ -1710,13 +1714,29 @@ function bindMeritEvents(){
     const lines=String(raw||'').replace(/\r/g,'').split('\n').map(l=>l.trim()).filter(Boolean);
     if(!lines.length) return toast('추가할 내용을 입력하세요');
     const entries=lines.map(l=>{
-      const parts = l.includes('\t') ? l.split('\t') : l.split(',');
+      let parts;
+      if(l.includes('\t')) parts=l.split('\t');
+      else if(l.includes(',')) parts=l.split(',');
+      else parts=l.split(/\s+/);
       return { no:(parts[0]||'').trim(), name:(parts[1]||'').trim() };
     }).filter(e=>e.no);
-    if(!entries.length) return toast('학번을 확인하세요');
-    await Promise.all(entries.map(e=> setDoc(docRef('meritPoints',e.no),{studentNo:e.no,name:e.name,merit:0,demerit:0,updatedAt:serverTimestamp()},{merge:true})));
-    byId('mtBulk').value='';
-    toast(`${entries.length}명 추가했어요`);
+    if(!entries.length) return toast('학번을 확인하세요 (학번과 이름을 탭·쉼표·공백으로 구분해주세요)');
+    let okCount=0, failMsg='';
+    const results = await Promise.allSettled(entries.map(e=>
+      setDoc(docRef('meritPoints',e.no),{studentNo:e.no,name:e.name,merit:0,demerit:0,updatedAt:serverTimestamp()},{merge:true})
+    ));
+    results.forEach((r,i)=>{
+      if(r.status==='fulfilled') okCount++;
+      else failMsg = failMsg || (r.reason && r.reason.message ? r.reason.message : '알 수 없는 오류');
+    });
+    if(okCount>0) byId('mtBulk').value='';
+    if(okCount===entries.length){
+      toast(`${okCount}명 추가했어요`);
+    }else if(okCount>0){
+      toast(`${okCount}명만 저장됨 — 일부 실패: ${failMsg}`);
+    }else{
+      toast('저장 실패 — '+failMsg);
+    }
   };
   document.querySelectorAll('[data-act="meritMerit"]').forEach(el=>el.onchange=async()=>{
     const no=el.dataset.no;

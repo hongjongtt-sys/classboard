@@ -1357,6 +1357,9 @@ function printHtml(title, inner){
     +'.phead{font-size:16px;font-weight:800;border-bottom:2px solid #333;padding-bottom:8px;margin-bottom:14px;color:#1e2a3a}'
     +'.q{font-weight:700;font-size:13px;color:#333;margin-top:12px}'
     +'.a{white-space:pre-wrap;word-break:break-word;margin:3px 0 10px;font-size:13px}'
+    +'table{width:100%;border-collapse:collapse;margin-top:8px}'
+    +'th,td{border:1px solid #ccc;padding:6px 10px;text-align:left;font-size:13px}'
+    +'th{background:#f0f0f0;font-weight:700}'
     +'@media print{ @page{margin:14mm} }'
     +'</style></head><body>'+inner
     +'<scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},200);}</scr'+'ipt>'
@@ -1621,6 +1624,18 @@ function meritRowClass(total){
 function sortedMerit(){
   return allMerit.slice().sort((a,b)=> String(a.studentNo).localeCompare(String(b.studentNo),'ko',{numeric:true}));
 }
+function printMeritAll(){
+  if(!allMerit.length) return toast('인쇄할 내역이 없어요');
+  const rows = sortedMerit().map(m=>{
+    const total=meritTotal(m);
+    return `<tr><td>${esc(m.studentNo)}</td><td>${esc(m.name||'')}</td><td>${Number(m.demerit)||0}</td><td>${Number(m.merit)||0}</td><td>${total}</td></tr>`;
+  }).join('');
+  const head = `${esc(classId?classId+'반 ':'')}상벌점 현황${meritLastUpdated?' · 최종 수정일 '+esc(meritLastUpdated):''}`;
+  const inner = `<div class="page"><div class="phead">${head}</div>
+    <table><thead><tr><th>학번</th><th>이름</th><th>벌점</th><th>상점</th><th>누계</th></tr></thead>
+    <tbody>${rows}</tbody></table></div>`;
+  printHtml(`상벌점_${classId||''}`, inner);
+}
 function renderMeritPanel(){
   const root=document.getElementById('meritRoot');
   if(!root) return;
@@ -1705,6 +1720,7 @@ function teacherMeritHTML(){
       <div style="display:flex;align-items:center;gap:6px;flex:0 0 auto">
         <input type="date" id="mtLastDate" value="${esc(meritLastUpdated||'')}" style="width:150px" />
         <button class="btn small" id="mtSaveDate" style="background:var(--c-merit);width:auto">저장</button>
+        <button class="btn small ghost" id="mtPrintAll" style="width:auto">인쇄</button>
       </div>
     </div>
     <p class="sub" style="margin-top:6px">상점·벌점 칸에 바로 입력하면 저장돼요. 누계 = 벌점 − 상점 (음수일수록 좋아요).</p>
@@ -1808,6 +1824,7 @@ function bindMeritEvents(){
     await setDoc(docRef('meritMeta','info'),{lastUpdated:v, updatedAt:serverTimestamp()},{merge:true});
     toast('마지막 수정일을 저장했어요');
   };
+  if(byId('mtPrintAll')) byId('mtPrintAll').onclick=printMeritAll;
 
   // 엑셀처럼 Enter=아래 칸, Shift+Enter=위 칸으로 이동 (Tab은 브라우저 기본 이동 사용)
   function attachMeritNav(selector){
